@@ -59,9 +59,9 @@ export class Hud {
     const sz = small ? 17 : 24;
     v.text(String(Math.round(this.scoreShown)).padStart(1, '0'), W - pad, pad, sz, d.hue, 1, 1);
     // Multiplier with the beat ring around it.
-    const my = pad + sz + (small ? 14 : 18);
-    const mx = W - pad - (small ? 14 : 18);
     const r = small ? 12 : 16;
+    const my = pad + sz + 10 + r;
+    const mx = W - pad - r;
     const beat = d.calm ? 0.5 : 1 - d.beat;
     v.begin();
     for (let i = 0; i <= 24; i++) {

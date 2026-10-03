@@ -109,13 +109,18 @@ class App {
     this.profile = parseProfile(saved);
     this.session.myShip = this.profile.ship;
     this.session.myTint = this.profile.tint;
+    this.session.myTrail = this.profile.trail;
     this.input.autofire = this.profile.autofire;
     this.applyQuality();
     await joining;
-    if (params.has('test')) {
+    // The test hook: ?test (standalone) or a 'rimshot:test' event (inside the platform's frame) hands a script the app,
+    // and 'bot' puts an autopilot on the controls. Nothing is exposed until asked for.
+    const hook = (mode) => {
       window.__rimshot = this;
-      if (params.get('test') === 'bot') this.autopilot = new Bot('expert', 99);
-    }
+      if (mode === 'bot') this.autopilot = new Bot('expert', 99);
+    };
+    if (params.has('test')) hook(params.get('test'));
+    addEventListener('rimshot:test', (e) => hook(e?.detail));
     requestAnimationFrame((t) => this.frame(t));
   }
 
@@ -346,6 +351,12 @@ class App {
       od: w.overdrive,
       shake: this.play.shake,
       ghostBolts: this.play.ghostBolts,
+      rim: RIMS[this.profile.rim]?.key || 'plain',
+      trails: w.ships.map((ship) => {
+        if (ship.idx === s.meIdx) return TRAILS[this.profile.trail]?.key || 'none';
+        const p = s.room?.players?.get?.(ship.id)?.presence;
+        return TRAILS[Number.isInteger(p?.tr) ? p.tr : 0]?.key || 'none';
+      }),
     });
     this.drawNames(w);
     this.fx.draw(this.vec);
@@ -395,19 +406,34 @@ class App {
   /** A player's name: stroke font when it can be, the UI face otherwise (any script, emoji). Never HTML. */
   nameText(name, x, y, maxW, host) {
     const clean = String(name || '').slice(0, 24);
-    const label = host ? `${clean} ★` : clean;
-    if (strokeable(clean) && this.vec.measure(clean, 10) <= maxW) {
-      this.vec.text(clean, x, y + 1, 10, WHITE, 0, 0.85);
-      if (host) this.vec.text('·', x + this.vec.measure(clean, 10) + 6, y + 1, 10, WHITE, 0, 0.6);
-      return;
+    const room = host ? 16 : 0;
+    let w;
+    if (strokeable(clean) && this.vec.measure(clean, 10) <= maxW - room) {
+      w = this.vec.text(clean, x, y + 1, 10, WHITE, 0, 0.85);
+    } else {
+      const c = this.vec.ctx;
+      c.globalCompositeOperation = 'source-over';
+      c.font = "600 13px 'Chakra', system-ui, sans-serif";
+      c.fillStyle = '#e8fff4';
+      c.textBaseline = 'top';
+      const text = fit(c, clean, maxW - room);
+      c.fillText(text, x, y);
+      w = c.measureText(text).width;
+      c.globalCompositeOperation = 'lighter';
     }
-    const c = this.vec.ctx;
-    c.globalCompositeOperation = 'source-over';
-    c.font = "600 13px 'Chakra', system-ui, sans-serif";
-    c.fillStyle = '#e8fff4';
-    c.textBaseline = 'top';
-    c.fillText(fit(c, label, maxW), x, y);
-    c.globalCompositeOperation = 'lighter';
+    if (host) {
+      // The host's mark: a small diamond after the name.
+      const v = this.vec;
+      const cx = x + w + 9;
+      const cy = y + 6;
+      v.begin();
+      v.move(cx, cy - 4);
+      v.to(cx + 4, cy);
+      v.to(cx, cy + 4);
+      v.to(cx - 4, cy);
+      v.to(cx, cy - 4);
+      v.glow(this.hue(), 1, 0.9);
+    }
   }
 
   nameAt(name, x, y, maxW, col, alpha) {
@@ -442,9 +468,9 @@ class App {
     return out;
   }
 
-  /** The chosen fall sound plays with the tape stop. */
-  tapeDeath() {
-    void TAPES;
+  /** The fall sound this player chose. */
+  fallSound() {
+    return TAPES[this.profile.tape]?.key || 'stop';
   }
 
   dim(alpha) {
@@ -461,9 +487,10 @@ class App {
 
   /** A bot plays a web behind the title and the lobby, quietly. */
   drawBackdrop(dt) {
-    if (!this.attract || this.attract.phase >= PHASE.DONE) {
-      const run = this.session.run;
-      const world = run && this.session.match.phase === 'lobby' && run.status === 'draft' ? zoneFor(run, run.idx).world : this.attractWorld ?? 0;
+    const run = this.session.run;
+    const wantWorld = run && this.session.match.phase === 'lobby' && run.status === 'draft' ? zoneFor(run, run.idx).world : 0;
+    if (!this.attract || this.attract.phase >= PHASE.DONE || wantWorld !== this.attractWorld) {
+      const world = wantWorld;
       this.attractWorld = world;
       const def = WORLDS[world];
       const zone = { mode: 'run', world, level: 1 + Math.floor(Math.random() * 3), shape: def.shapes[Math.floor(Math.random() * def.shapes.length)], bpm: def.bpm, seed: Math.floor(Math.random() * 1e9), oc: 0 };
@@ -599,6 +626,7 @@ class App {
         }
         this.profile[kind] = i;
         if (kind === 'tint') s.myTint = i;
+        if (kind === 'trail') s.myTrail = i;
         this.saveSoon();
         return;
       }

@@ -250,8 +250,7 @@ export class Play {
         fx.shatter(app.shipPoints(w.ships[ev.id]?.type || 0, ev.lane), WHITE, 160, 0.9);
         fx.ring(p[0], p[1], 4, 90, 0.6, WHITE, 18);
         if (mine(ev.id)) {
-          music.down();
-          app.tapeDeath();
+          music.down(app.fallSound());
           this.shakeAmt = calm ? 0 : 9;
           hud.say(DEATH_NAMES[ev.a] ? 'DOWN' : 'DOWN', { life: 1.5, priority: 4, color: WHITE });
           if (!w.auth) s.pendingDown = ev.a || 1;

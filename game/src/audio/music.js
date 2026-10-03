@@ -207,8 +207,8 @@ export class Music {
     o.frequency.exponentialRampToValueAtTime(30, t + 1.0);
   }
 
-  /** A ship goes down: the tape slows, the band drops a layer for two bars. */
-  down() {
+  /** A ship goes down: the band drops a layer for two bars, and the fall plays in the player's chosen sound. */
+  down(style = 'stop') {
     const e = this.e;
     if (!e.live) return;
     const t = e.now();
@@ -218,9 +218,30 @@ export class Music {
     f.exponentialRampToValueAtTime(260, t + 0.45);
     f.setTargetAtTime([2200, 4000, 7000, 9000, 14000][Math.max(0, this.layer - 1)], t + 0.5, 0.6);
     const g = e.gain(0, e.sfx);
-    e.env(g, t, 0.005, 0.32, 0.6);
-    const o = e.osc('sawtooth', mtof(this.root + 12), t, t + 0.65, e.filter('lowpass', 900, 1, g));
-    o.frequency.exponentialRampToValueAtTime(mtof(this.root - 24), t + 0.55);
+    if (style === 'spin') {
+      // A record pulled to a stop: a wobbling fall.
+      e.env(g, t, 0.005, 0.28, 0.9);
+      const o = e.osc('sawtooth', mtof(this.root + 24), t, t + 0.95, e.filter('lowpass', 1400, 2, g));
+      o.frequency.exponentialRampToValueAtTime(mtof(this.root - 12), t + 0.85);
+      const lfo = e.osc('sine', 9, t, t + 0.95, e.gain(30, o.frequency));
+      void lfo;
+    } else if (style === 'crush') {
+      // A chunky square falling in steps.
+      e.env(g, t, 0.002, 0.22, 0.55);
+      const o = e.osc('square', mtof(this.root + 19), t, t + 0.6, g);
+      for (let i = 1; i <= 6; i++) o.frequency.setValueAtTime(mtof(this.root + 19 - i * 5), t + i * 0.07);
+    } else if (style === 'sigh') {
+      // A soft chord that sinks.
+      e.env(g, t, 0.02, 0.18, 1.1);
+      for (const n of this.chord(this.chords[0], this.root + 12)) {
+        const o = e.osc('triangle', mtof(n), t, t + 1.2, g);
+        o.frequency.exponentialRampToValueAtTime(mtof(n - 5), t + 1.1);
+      }
+    } else {
+      e.env(g, t, 0.005, 0.32, 0.6);
+      const o = e.osc('sawtooth', mtof(this.root + 12), t, t + 0.65, e.filter('lowpass', 900, 1, g));
+      o.frequency.exponentialRampToValueAtTime(mtof(this.root - 24), t + 0.55);
+    }
     burst(e, t, 0.6, 0.4);
     const k = Math.floor((t - e.offset) / (60 / e.bpm / 4));
     this.dropUntil = (Math.floor(k / 16) + 3) * 16;

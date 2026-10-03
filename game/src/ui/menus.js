@@ -11,6 +11,20 @@ import { strokeable } from '../render/vector.js';
 
 const WHITE = '#ffffff';
 const MODE_TAG = { run: 'SIX WORLDS', descent: 'NO BOTTOM', daily: 'TODAY ONLY', practice: 'ONE ZONE' };
+const ADVICE = {
+  FLIPPER: 'KEEP FIRING AS THEY LAND',
+  SHOT: 'SHOOT THE SHOTS DOWN',
+  PULSAR: 'LEAVE ON THE BUILD-UP',
+  MINE: 'SHOOT MINES BEFORE ZERO',
+  SPIKE: 'CLEAR SPIKES BEFORE THE WARP',
+  FUSEBALL: 'HIT THEM MID-LANE',
+  GHOST: 'THEY BITE ON THE BEAT',
+  WEAVER: 'MEET THEM AT A LANE',
+  SIREN: 'KILL THE CHOIR TOGETHER',
+  BOMBER: 'DOWN BOMBERS EARLY',
+  BOSS: 'WATCH THE LIT LANES',
+  TIDE: 'STAY IN THE DRY HALF',
+};
 const CAUSE = {
   FLIPPER: 'CAUGHT BY A FLIPPER',
   SHOT: 'SHOT DOWN',
@@ -347,8 +361,8 @@ export class Menus {
           const al = wide ? 0.5 : 0;
           const ty = wide ? b.y + icon + 34 : b.y + b.h / 2 - 16;
           const name = have ? `${def.name} ${'I'.repeat(have + 1)}` : def.name;
-          v.text(name, tx, ty, Math.min(15, (b.w - (wide ? 16 : icon + 40)) / Math.max(5, name.length * 0.95)), col, al, 1);
-          v.text(def.tag, tx, ty + 22, Math.min(8, (b.w - (wide ? 16 : icon + 40)) / Math.max(8, def.tag.length * 0.92)), WHITE, al, 0.6);
+          v.text(name, tx, ty, Math.min(16, (b.w - (wide ? 16 : icon + 40)) / Math.max(5, name.length * 0.95)), col, al, 1);
+          v.text(def.tag, tx, ty + 24, Math.min(10, (b.w - (wide ? 16 : icon + 40)) / Math.max(8, def.tag.length * 0.92)), WHITE, al, 0.7);
         },
       });
     });
@@ -394,8 +408,11 @@ export class Menus {
     vec.text(title, W / 2, y, big, r.cleared ? WHITE : hue, 0.5, 1, 1.3);
     y += big + 16;
     const cause = DEATH_NAMES[r.cause];
-    if (!r.cleared && (cause || r.ended)) vec.text(`${r.ended ? 'ENDED' : CAUSE[cause] || cause} · ZONE ${r.zone}`, W / 2, y, 11, WHITE, 0.5, 0.75);
-    y += 30;
+    if (!r.cleared && (cause || r.ended)) {
+      vec.text(`${r.ended ? 'ENDED' : CAUSE[cause] || cause} · ZONE ${r.zone}`, W / 2, y, 11, WHITE, 0.5, 0.8);
+      if (!r.ended && ADVICE[cause]) vec.text(ADVICE[cause], W / 2, y + 18, 9, hue, 0.5, 0.7);
+    }
+    y += 40;
     vec.text(String(run.score), W / 2, y, Math.min(34, W / 12), hue, 0.5, 1);
     y += Math.min(34, W / 12) + 10;
     const best = run.mode === 'descent' ? app.profile.bestDescent : app.profile.best;
@@ -424,7 +441,7 @@ export class Menus {
       y += 20;
     }
     const bw = 170;
-    if (s.isHost) buttons.push({ id: 'tohub', x: W / 2 - bw / 2, y: Math.min(H - 160, Math.max(y + 10, a.y + a.h - 50)), w: bw, h: 48, label: 'SHIPS', key: 'H' });
+    if (s.isHost) buttons.push({ id: 'tohub', x: W / 2 - bw / 2, y: Math.min(H - 160, Math.max(y + 10, a.y + a.h - 50)), w: bw, h: 48, label: 'SHIPS' });
     if (!app.platformPresent) buttons.push({ id: 'start', x: W / 2 - 110, y: H - 84, w: 220, h: 56, label: 'AGAIN', key: 'ENTER' });
     return buttons;
   }

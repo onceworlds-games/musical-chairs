@@ -124,11 +124,12 @@ export const SHAPES = {
     closed: true,
     lanes: 20,
     verts: () => {
+      // A point straight up; listed counter-clockwise on screen like every loop.
       const v = [];
       for (let i = 0; i < 10; i++) {
-        const a = Math.PI / 2 - (TAU * i) / 10 + Math.PI / 10;
-        const r = i % 2 === 0 ? 1.12 : 0.55;
-        v.push([Math.cos(a) * r, Math.sin(a) * r]);
+        const a = -Math.PI / 2 - (TAU * i) / 10;
+        const r = i % 2 === 0 ? 1.12 : 0.5;
+        v.push([Math.cos(a) * r, Math.sin(a) * r + 0.06]);
       }
       return bottomFirst(v);
     },

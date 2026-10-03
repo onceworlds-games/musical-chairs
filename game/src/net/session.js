@@ -612,6 +612,7 @@ export class Session {
       s: this.screen,
       sh: this.myShip,
       ti: this.myTint,
+      tr: this.myTrail || 0,
       m: this.worldMid || '',
       u: ship ? Math.round(ship.u * 100) : 0,
       f: ship && ship.in.fire && ship.state === 'live' ? 1 : 0,

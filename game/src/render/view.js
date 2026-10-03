@@ -344,6 +344,7 @@ export class View {
       v.to(tmpA[0], tmpA[1]);
     }
     v.glow(this.hue, 1.5 + od * 0.8, 0.72 + 0.28 * pulse + 0.2 * od);
+    this.rimStyle(scene, bounds);
     // A slight colour split on the beat (not in Calm, not on low quality).
     if (!scene.calm && pulse > 0.35 && v.quality === 'high') {
       const off = 1.6 * pulse;
@@ -371,6 +372,43 @@ export class View {
       }
       v.glow(me.tint || WHITE, 1, 0.42);
     }
+  }
+
+  /** The player's chosen rim: a second line outside it, beads at its corners, or teeth along it. */
+  rimStyle(scene, bounds) {
+    const style = scene.rim || 'plain';
+    if (style === 'plain' || this.camZ > 0) return;
+    const v = this.vec;
+    const web = this.web;
+    v.begin();
+    if (style === 'double') {
+      for (let j = 0; j < bounds; j++) {
+        this.B(j, -0.035, tmpA);
+        if (j === 0) v.move(tmpA[0], tmpA[1]);
+        else v.to(tmpA[0], tmpA[1]);
+      }
+      if (web.closed) {
+        this.B(0, -0.035, tmpA);
+        v.to(tmpA[0], tmpA[1]);
+      }
+    } else if (style === 'beads') {
+      for (let j = 0; j < bounds; j++) {
+        this.B(j, 0, tmpA);
+        const r = 3;
+        v.move(tmpA[0], tmpA[1] - r);
+        v.to(tmpA[0] + r, tmpA[1]);
+        v.to(tmpA[0], tmpA[1] + r);
+        v.to(tmpA[0] - r, tmpA[1]);
+        v.to(tmpA[0], tmpA[1] - r);
+      }
+    } else if (style === 'teeth') {
+      for (let l = 0; l < web.n; l++) {
+        this.P(l, 0, tmpA);
+        this.P(l, -0.05, tmpB);
+        v.line(tmpA[0], tmpA[1], tmpB[0], tmpB[1]);
+      }
+    }
+    v.glow(this.hue, 1, 0.55);
   }
 
   interpU(ship, alpha) {
@@ -726,11 +764,46 @@ export class View {
     }
   }
 
+  /** A ship's trail along the rim (a cosmetic): dots, dashes or a ribbon where it has just been. */
+  drawTrail(ship, u, scene) {
+    const kind = scene.trails?.[ship.idx];
+    const hist = ship.trail || (ship.trail = []);
+    hist.push(u);
+    if (hist.length > 14) hist.shift();
+    if (!kind || kind === 'none' || ship.state !== 'live' || this.camZ > 0) return;
+    const v = this.vec;
+    const n = this.web.n;
+    v.begin();
+    let any = false;
+    for (let i = 0; i < hist.length - 1; i++) {
+      const a = hist[i];
+      const b = hist[i + 1];
+      if (Math.abs(a - b) > n / 2 || Math.abs(a - u) < 0.3) continue;
+      any = true;
+      if (kind === 'dots') {
+        this.P(a, 0.012, tmpA);
+        v.move(tmpA[0], tmpA[1]);
+        v.to(tmpA[0] + 0.6, tmpA[1] + 0.6);
+      } else if (kind === 'dash') {
+        if (i % 2) continue;
+        this.P(a, 0.012, tmpA);
+        this.P(b, 0.012, tmpB);
+        v.line(tmpA[0], tmpA[1], tmpB[0], tmpB[1]);
+      } else {
+        this.P(a, 0.012 + 0.004 * (hist.length - i), tmpA);
+        this.P(b, 0.012 + 0.004 * (hist.length - i - 1), tmpB);
+        v.line(tmpA[0], tmpA[1], tmpB[0], tmpB[1]);
+      }
+    }
+    if (any) v.glow(scene.tints[ship.idx] || WHITE, kind === 'dots' ? 2.4 : 1.4, 0.7);
+  }
+
   drawShips(scene) {
     const w = scene.w;
     const v = this.vec;
     const f = this.flat;
     const t = scene.t;
+    for (const ship of w.ships) if (!ship.gone) this.drawTrail(ship, this.interpU(ship, scene.alpha), scene);
     const live = [];
     for (const ship of w.ships) {
       if (ship.gone) continue;
@@ -778,13 +851,6 @@ export class View {
         f.cx -= f.dx * 0.06;
         f.cy -= f.dy * 0.06;
         this.strokes(SHIP_SHAPES[ship.type] || SHIP_SHAPES[0], f, 1, 1.05);
-        // Player pips (co-op): one to four small marks behind the ship.
-        if (w.ships.length > 1) {
-          for (let k = 0; k <= ship.idx; k++) {
-            const x = (k - ship.idx / 2) * 0.3;
-            this.strokes([[x, -0.45, x, -0.62]], f);
-          }
-        }
         const inv = ship.inv > w.step;
         const bright = inv ? (scene.calm ? 0.6 : 0.55 + 0.35 * Math.abs(Math.sin(t * 5))) : 1;
         v.glow(tint, 1.7, bright);

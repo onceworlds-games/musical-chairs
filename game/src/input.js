@@ -84,7 +84,8 @@ export class Input {
       if (HOP.has(k)) this.edges.hop = true;
       if (ZAP.has(k)) this.edges.zap = true;
       if (k === 'p' || k === 'P' || k === 'Escape') this.edges.pause = true;
-      if (k === 'Enter') this.edges.confirm = true;
+      // Enter on a focused button presses that button, not the screen's default.
+      if (k === 'Enter' && !(document.activeElement && document.activeElement.tagName === 'BUTTON')) this.edges.confirm = true;
       if ((k === 'f' || k === 'F') && this.enabled) this.autofire = !this.autofire;
       if (LEFT.has(k)) this.stepKey(-1);
       if (RIGHT.has(k)) this.stepKey(1);

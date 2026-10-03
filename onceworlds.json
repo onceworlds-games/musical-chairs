@@ -1,8 +1,23 @@
 {
   "slug": "rimshot",
   "name": "Rimshot",
-  "description": "A neon tunnel shooter that plays its own music. Inspired by Tempest.",
+  "description": "Ride the rim of a vector tunnel and shoot down its lanes on the beat; the track is yours. Inspired by Tempest.",
   "dir": "game",
   "productionBranch": "main",
-  "genre": "Shooter"
+  "genre": "Shooter",
+  "controls": [
+    { "keys": ["←", "→"], "action": "Move round the rim (A, D too)" },
+    { "keys": ["Space"], "action": "Fire (hold)" },
+    { "keys": ["Shift", "↑"], "action": "Hop three lanes" },
+    { "keys": ["↓", "Ctrl"], "action": "Zap (once a zone)" },
+    { "keys": ["F"], "action": "Auto-fire on or off" },
+    { "keys": ["P", "Esc"], "action": "Pause (alone)" },
+    { "keys": ["Mouse"], "action": "Point at a lane; hold left to fire" },
+    { "keys": ["Right click"], "action": "Hop" },
+    { "keys": ["Wheel down"], "action": "Zap" },
+    { "keys": ["Drag"], "action": "Touch: turn the ship; fire is automatic" },
+    { "keys": ["Stick", "A"], "action": "Pad: move, fire (B hop, X zap)" },
+    { "keys": ["Enter"], "action": "Start or ready in the lobby" }
+  ],
+  "help": "Shoot what climbs the lanes before it reaches the rim. Two kills in a beat raise the multiplier; three lanes on one beat make a chord. Fill Resonance for Overdrive. Hop on the beat for more. Pulsars burn their lane on the bar line; shoot spikes before the warp. Pick a mod after every zone. Friends share ships and can revive you."
 }
