@@ -3,6 +3,8 @@
 // game's (the room's match time); the audio offset follows it smoothly, so the beat never drifts and a hitch never
 // skips a note. Every instrument is synthesized here.
 
+const LATE = 0.06; // seconds: how late a note may still be played (past that it is dropped, never smeared)
+
 export class Engine {
   constructor() {
     this.ctx = null;
@@ -18,6 +20,8 @@ export class Engine {
     this.nextTick = 0;
     this.running = false;
     this.timer = 0;
+    this.lastTick = -1; // the newest sixteenth handed to the band (so a re-sync never plays one twice)
+    this.joinHandler = null; // called when the clock was just placed: the band catches up with the bar in progress
   }
 
   /** Starts (or resumes) audio. Call from a tap or key press inside the game. */
@@ -32,11 +36,32 @@ export class Engine {
       if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
       this.ok = true;
       if (!this.timer) this.timer = setInterval(() => this.pump(), 25);
+      this.listen();
       return true;
     } catch {
       this.ok = false;
       return false;
     }
+  }
+
+  /**
+   * A phone call, Siri or the lock screen can park the context without the page ever being hidden: the next touch,
+   * key or click (the only moments iOS lets sound start) brings it back, and the clock is placed again.
+   */
+  listen() {
+    if (this.listening || !this.ctx) return;
+    this.listening = true;
+    const again = () => this.wake();
+    for (const ev of ['touchend', 'pointerup', 'click', 'keydown']) {
+      try {
+        addEventListener(ev, again, { capture: true, passive: true });
+      } catch {}
+    }
+    try {
+      this.ctx.addEventListener('statechange', () => {
+        if (this.ctx.state === 'running') this.resync();
+      });
+    } catch {}
   }
 
   get live() {
@@ -110,7 +135,11 @@ export class Engine {
 
   /** iOS parks a context as 'interrupted' (a call, the lock screen): try again when we are back. */
   wake() {
-    if (this.ctx && this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
+    if (this.ctx && this.ctx.state !== 'running') {
+      try {
+        this.ctx.resume().catch(() => {});
+      } catch {}
+    }
   }
 
   // ---------------------------------------------------------------- the clock
@@ -126,10 +155,19 @@ export class Engine {
     const sample = this.ctx.currentTime - songT;
     if (!this.synced || Math.abs(sample - this.offset) > 0.08 || paused) {
       // A jump (a new zone, a pause, a long hitch): snap, and start scheduling from here.
+      const fresh = !this.synced;
       this.offset = sample;
       this.synced = true;
       const t16 = 60 / bpm / 4;
-      this.nextTick = Math.max(0, Math.ceil((songT + 0.01) / t16));
+      // A sixteenth that fell due a moment ago still plays (late by a few ms beats missing), but never twice.
+      this.nextTick = Math.max(this.lastTick + 1, Math.max(0, Math.ceil((songT - LATE) / t16)));
+      if (fresh && this.joinHandler && this.ctx.state === 'running') {
+        try {
+          this.joinHandler(Math.floor(songT / t16), t16);
+        } catch (err) {
+          console.error(err);
+        }
+      }
     } else this.offset += (sample - this.offset) * 0.04;
     this.songT = songT;
     this.pump();
@@ -138,6 +176,7 @@ export class Engine {
   /** A song clock that jumped (a new zone, a new tempo): the next sync snaps. */
   resync() {
     this.synced = false;
+    this.lastTick = -1;
   }
 
   /** Audio time at which song time t is heard. */
@@ -154,13 +193,14 @@ export class Engine {
       const songAt = this.nextTick * t16;
       const when = this.at(songAt);
       if (when > horizon) break;
-      if (when >= this.ctx.currentTime - 0.02) {
+      if (when >= this.ctx.currentTime - LATE) {
         try {
           this.tickHandler(this.nextTick, Math.max(when, this.ctx.currentTime), t16);
         } catch (err) {
           console.error(err);
         }
       }
+      this.lastTick = this.nextTick;
       this.nextTick++;
     }
   }

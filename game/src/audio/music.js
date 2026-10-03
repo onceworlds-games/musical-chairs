@@ -36,6 +36,7 @@ export class Music {
     this.lastKill = 0;
     this.dropUntil = -1;
     engine.tickHandler = (k, when, t16) => this.tick(k, when, t16);
+    engine.joinHandler = (k, t16) => this.join(k, t16);
   }
 
   setWorld(def) {
@@ -65,6 +66,14 @@ export class Music {
   chordAt(k) {
     const bar = Math.floor(k / 16);
     return this.chords[((bar % 4) + 4) % 4];
+  }
+
+  /** The clock was placed inside a bar (a zone's first frames, a reload): the chord of that bar sounds for what is left of it. */
+  join(k, t16) {
+    const e = this.e;
+    const step = ((k % 16) + 16) % 16;
+    if (step === 0 || step > 12) return;
+    pad(e, e.ctx.currentTime + 0.02, this.chord(this.chordAt(k), this.root + 12), (16 - step) * t16 * 0.98, 0.7, this.grit);
   }
 
   tick(k, when, t16) {

@@ -9,7 +9,8 @@
     "test": "node --test test/*.test.mjs",
     "balance": "node scripts/balance.mjs",
     "store": "node scripts/store.mjs",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "audio": "node scripts/audio.mjs"
   },
   "license": "MIT"
 }
