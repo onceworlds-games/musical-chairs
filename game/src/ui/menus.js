@@ -311,6 +311,15 @@ export class Menus {
     return buttons;
   }
 
+  /** What the score was made of: the run's biggest payouts, one line each. Returns the y below them. */
+  moments(vec, run, cx, y, size, hue, step = 20) {
+    for (const [value, label, zone] of run.top || []) {
+      vec.text(`${label}  ${value}  ${zone}`, cx, y, size, hue, 0.5, 0.8);
+      y += step;
+    }
+    return y;
+  }
+
   /** The results on a short screen: one column. */
   resultsShort(vec, W, H, t, hue) {
     const app = this.app;
@@ -330,17 +339,23 @@ export class Menus {
     let y = 176;
     if (app.newBest) vec.text('NEW BEST', cx, y, 13, hue, 0.5, app.calm ? 0.95 : 0.7 + 0.3 * Math.abs(Math.sin(t * 2.5)));
     else if (best) vec.text(`BEST ${best}`, cx, y, 12, hue, 0.5, 0.8);
-    y += 24;
+    y += 22;
+    // What fits above the platform's strip, most telling first: the biggest payouts, then the tally, then the crew.
+    const room = () => H - 96 - y;
+    const top = (run.top || []).slice(0, Math.max(0, Math.min(3, Math.floor(room() / 17) - 2)));
+    y = this.moments(vec, { top }, cx, y, 11, hue, 17);
     const mine = run.players[s.room.me.id];
-    if (mine) vec.text(`KILLS ${mine.kills}   CHORDS ${mine.chords}   BOSSES ${run.stats.bosses}`, cx, y, 11, hue, 0.5, 0.85);
-    y += 24;
+    if (mine && room() >= 18) {
+      vec.text(`KILLS ${mine.kills}   CHORDS ${mine.chords}   BOSSES ${run.stats.bosses}`, cx, y, 11, hue, 0.5, 0.85);
+      y += 20;
+    }
     const list = Object.entries(run.players)
       .map(([id, p]) => ({ id, ...p }))
       .sort((p, q) => q.score - p.score)
       .slice(0, 4);
     if (list.length > 1) {
       const rowW = 300;
-      for (const p of list.slice(0, 2)) {
+      for (const p of list.slice(0, Math.max(0, Math.min(2, Math.floor(room() / 22))))) {
         const x = cx - rowW / 2;
         vec.begin();
         shipIcon(vec, p.ship, x + 10, y + 7, 8);
@@ -351,6 +366,7 @@ export class Menus {
       }
     }
     for (const u of (app.unlocked || []).slice(0, 2)) {
+      if (room() < 16) break;
       vec.text(`NEW ${u}`, cx, y, 12, WHITE, 0.5, 0.95);
       y += 18;
     }
@@ -648,6 +664,7 @@ export class Menus {
     if (app.newBest) vec.text('NEW BEST', cx, y, Math.max(12, Math.min(14, R * 0.07)), hue, 0.5, app.calm ? 0.95 : 0.7 + 0.3 * Math.abs(Math.sin(t * 2.5)));
     else if (best) vec.text(`BEST ${best}`, cx, y, Math.max(11, Math.min(12, R * 0.06)), hue, 0.5, 0.8);
     y += 30;
+    y = this.moments(vec, run, cx, y, 11, hue);
     const list = Object.entries(run.players)
       .map(([id, p]) => ({ id, ...p }))
       .sort((p, q) => q.score - p.score)

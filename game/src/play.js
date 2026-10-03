@@ -4,6 +4,7 @@ import { PHASE, DEATH_NAMES } from './sim/world.js';
 import { E, WORLDS, STEPS_PER_BEAT } from './sim/data.js';
 import { zoneLabel } from './sim/run.js';
 import { laneOf } from './sim/web.js';
+import { CAUSE } from './ui/menus.js';
 
 const WHITE = '#ffffff';
 const HINTS = {
@@ -254,7 +255,10 @@ export class Play {
         if (mine(ev.id)) {
           music.down(app.fallSound());
           this.shakeAmt = calm ? 0 : 9;
-          hud.say(DEATH_NAMES[ev.a] ? 'DOWN' : 'DOWN', { life: 1.5, priority: 4, color: WHITE });
+          hud.say('DOWN', { life: 1.5, priority: 4, color: WHITE });
+          // What caught you, in a few words (the telegraphs only teach if the fall says what it was).
+          const why = CAUSE[DEATH_NAMES[ev.a]];
+          if (why) hud.say(why, { kind: 'small', life: 1.8, color: this.hue });
           if (!w.auth) s.pendingDown = ev.a || 1;
         }
         share('d', ev.id, ev.lane, ev.a);
@@ -293,6 +297,14 @@ export class Play {
         share('z', ev.id, ev.lane);
         break;
       }
+      case 'warn':
+        // A crawler has landed in your lane: a moment to shoot it or hop.
+        if (mine(ev.id)) {
+          music.warn();
+          const p = this.at(ev.lane, 0);
+          fx.ring(p[0], p[1], 34, 12, 0.22, WHITE, 4);
+        }
+        break;
       case 'nozap':
         if (mine(ev.id)) {
           music.denied();

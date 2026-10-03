@@ -131,6 +131,7 @@ export class World {
     this.maxLives = maxLivesFor(this.ships.length);
     this.undertow = Math.max(0, ...this.ships.map((s) => mod(s, 'undertow')));
     this.wrecks = [];
+    this.moments = []; // the zone's biggest payouts, [value, label]: the results show what the score was made of
   }
 
   makeShip(p, idx, carry) {
@@ -315,6 +316,7 @@ export class World {
       if (this.barKills > 0 && this.barRim === 0 && this.barHit === 0) {
         this.stats.perfect++;
         this.addScore(PERFECT_BAR_POINTS * this.mult, -1);
+        this.moment('PERFECT BAR', PERFECT_BAR_POINTS * this.mult);
         this.addRes(6);
         this.event('perfect', 0, 0, 0, finished, PERFECT_BAR_POINTS * this.mult);
       }
@@ -482,6 +484,7 @@ export class World {
     const per = CHORD_POINTS * (1 + harm);
     const value = Math.round(per * (lanes - Math.max(2, prev)) * this.mult * (this.overdrive ? 2 : 1) * (players >= 3 ? 2 : 1));
     this.addScore(value, by);
+    this.moment(`${lanes}-CHORD`, value);
     if (prev < 3) {
       this.stats.chords++;
       this.addRes(8);
@@ -498,6 +501,14 @@ export class World {
         if (burst.some((l) => laneDist(this.web, l, lane) <= 1) && Math.abs(o.z - e.z) < 0.22) this.damage(o, 1, by, 'chain');
       }
     }
+  }
+
+  /** Notes a big payout for the results (the three largest of the zone are kept). */
+  moment(label, value) {
+    if (!this.auth || !(value > 0)) return;
+    this.moments.push([Math.round(value), label]);
+    this.moments.sort((a, b) => b[0] - a[0]);
+    if (this.moments.length > 3) this.moments.length = 3;
   }
 
   addScore(value, by) {
@@ -627,7 +638,10 @@ export class World {
       const lvl = Math.min(3, this.zone.level);
       const bonus = ZONE_POINTS * ((this.zone.world % 6) + 1) * lvl + (flawless ? FLAWLESS_POINTS * ((this.zone.world % 6) + 1) : 0);
       this.addScore(bonus, -1);
-      if (flawless) this.event('flawless', 0, 0, 0, FLAWLESS_POINTS * ((this.zone.world % 6) + 1));
+      if (flawless) {
+        this.event('flawless', 0, 0, 0, FLAWLESS_POINTS * ((this.zone.world % 6) + 1));
+        this.moment('FLAWLESS', FLAWLESS_POINTS * ((this.zone.world % 6) + 1));
+      }
       if (this.zone.level >= 4 && this.lives < this.maxLives) {
         // A world cleared: one more ship.
         this.lives++;

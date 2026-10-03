@@ -192,6 +192,42 @@ test('chords: three lanes in one beat pay and lift the multiplier', () => {
   assert.ok(w.score - before > 3 * 150);
 });
 
+test('the zone keeps its three biggest payouts for the results', () => {
+  const w = bench();
+  while (w.step % STEPS_PER_BEAT !== 1) w.update();
+  const es = [2, 6, 10].map((l) => spawnEnemy(w, E.FLIPPER, l, { z: 0.4 }));
+  for (const e of es) w.damage(e, 5, 0, 'bolt');
+  assert.ok(w.moments.length >= 1);
+  assert.equal(w.moments[0][1], '3-CHORD');
+  assert.ok(w.moments[0][0] > 0);
+  for (let i = 0; i < 6; i++) w.moment(`X${i}`, 100 * (i + 1));
+  assert.equal(w.moments.length, 3, 'only the biggest three');
+  assert.ok(w.moments[0][0] >= w.moments[1][0] && w.moments[1][0] >= w.moments[2][0]);
+});
+
+test('a crawler that lands in your lane warns before it catches you', () => {
+  const w = bench();
+  const ship = w.ships[0];
+  ship.inv = 0;
+  ship.in.fire = false;
+  const lane = laneOf(w.web, ship.u);
+  const e = spawnEnemy(w, E.FLIPPER, lane, { z: 0 });
+  e.st = S.RIM;
+  e.next = Infinity;
+  w.drain();
+  let warned = -1;
+  let down = -1;
+  for (let i = 0; i < 40 && down < 0; i++) {
+    w.update();
+    for (const ev of w.drain()) {
+      if (ev.k === 'warn' && warned < 0) warned = i;
+      if (ev.k === 'down') down = i;
+    }
+  }
+  assert.ok(warned >= 0, 'a warning came');
+  assert.ok(down > warned + 6, `the fall came ${down - warned} steps later`);
+});
+
 test('resonance fills to Overdrive, which doubles points and ends', () => {
   const w = bench();
   w.res = 99;

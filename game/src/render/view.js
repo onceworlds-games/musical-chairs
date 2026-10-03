@@ -1,7 +1,7 @@
 // The game seen down the barrel: the web, everything on it, and the ships on the rim. Reads the simulation (never
 // writes it) and draws with the vector renderer. The camera leans a little toward your ship, spins with the web,
 // and dives down the tunnel during the warp.
-import { E, STEPS_PER_BEAT, TICKS_PER_BAR } from '../sim/data.js';
+import { E, SHIP, STEPS_PER_BEAT, STEPS_PER_TICK, TICKS_PER_BAR } from '../sim/data.js';
 import { SHAPE, SHIP_SHAPES, WRECK, fuseStrokes, noteStrokes } from './shapes.js';
 import { ghostVisible, S as ST } from '../sim/enemies.js';
 import { PHASE } from '../sim/world.js';
@@ -761,6 +761,18 @@ export class View {
           v.begin();
           this.strokes([ARC], f, 1.15, 1.15);
           v.glow(tint, 1.1, 0.7);
+        }
+        // Something has landed in your lane: a diamond closes in on the ship (shoot it or hop before it shuts).
+        if (ship.contact > 0 && ship.kind !== 'puppet' && w.step >= ship.inv) {
+          const k = Math.min(1, ship.contact / (SHIP.contactGraceTicks * STEPS_PER_TICK));
+          const r = f.len * (2.4 - 1.5 * k);
+          v.begin();
+          v.move(f.cx, f.cy - r);
+          v.to(f.cx + r, f.cy);
+          v.to(f.cx, f.cy + r);
+          v.to(f.cx - r, f.cy);
+          v.to(f.cx, f.cy - r);
+          v.glow(WHITE, 1.4, 0.45 + 0.55 * k);
         }
         // Sustain charging: a growing bar under the ship.
         if (ship.charge > 0) {

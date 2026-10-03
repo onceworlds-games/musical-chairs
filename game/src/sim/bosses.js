@@ -533,6 +533,7 @@ function bossDown(w, boss, by) {
   w.stats.bossDown = true;
   const value = 10000 * ((w.zone.world % 6) + 1) * (w.overdrive ? 2 : 1);
   w.addScore(value, by);
+  w.moment(`${boss.name} DOWN`, value);
   w.event('bossdown', 0, w.web.start, 0.8, value);
   w.vampBars = 2;
   if (w.phase === 1) w.setPhase(2);

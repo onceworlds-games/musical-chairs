@@ -256,6 +256,15 @@ export class Music {
     this.dropUntil = (Math.floor(k / 16) + 3) * 16;
   }
 
+  /** Something has landed in your lane: two quick rising notes, a warning that is never missed. */
+  warn() {
+    const e = this.e;
+    if (!e.live) return;
+    const t = e.now();
+    blip(e, t, 1320, 0.35, 0.045, 'square');
+    blip(e, t + 0.05, 1760, 0.35, 0.05, 'square');
+  }
+
   respawn() {
     const e = this.e;
     if (!e.live) return;

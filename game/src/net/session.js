@@ -74,6 +74,7 @@ export function cleanRun(raw) {
     daily: null,
     practice: null,
     result: null,
+    top: Array.isArray(raw.top) ? raw.top.slice(0, 3).filter((x) => Array.isArray(x) && Number.isFinite(x[0])).map((x) => [clampInt(x[0], 0, 99_999_999, 0), str(x[1], 16), str(x[2], 8)]) : [],
     stats: raw.stats && typeof raw.stats === 'object' ? { bosses: clampInt(raw.stats.bosses, 0, 999, 0), flawless: clampInt(raw.stats.flawless, 0, 999, 0) } : { bosses: 0, flawless: 0 },
   };
   if (run.mode === 'daily') {
@@ -315,6 +316,7 @@ export class Session {
         daily: mode === 'daily' ? { day } : null,
         practice: mode === 'practice' ? { world: hub.pw, level: hub.pl, tempo: TEMPOS[hub.pt] ?? 1 } : null,
         stats: { bosses: 0, flawless: 0 },
+        top: [],
       };
       run.lives = run.oc >= 6 ? 2 : SHIP.lives;
     }
@@ -448,6 +450,8 @@ export class Session {
       ship.tether = 0;
     }
     const zone = w.zone;
+    // The run's three biggest payouts so far, with where they happened.
+    run.top = [...(run.top || []), ...w.moments.map((m) => [m[0], m[1], zoneLabel(zone)])].sort((a, b) => b[0] - a[0]).slice(0, 3);
     if (w.phase === PHASE.DONE) {
       if (zone.level >= 4) run.stats.bosses++;
       if (w.stats.flawless) run.stats.flawless++;

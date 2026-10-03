@@ -83,6 +83,7 @@ export const coopMethods = {
       this.stats.choirs++;
       const value = CHOIR_BONUS * this.mult * (this.overdrive ? 2 : 1);
       this.addScore(value, e.hitBy);
+      this.moment('CHOIR', value);
       this.addRes(10);
       this.event('choir', e.group, e.lane, e.z, value);
     }

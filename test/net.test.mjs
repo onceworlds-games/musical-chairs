@@ -124,7 +124,11 @@ test('run records and hub settings from room state are checked', () => {
     roster: ['a', 'ghost', 7],
     players: { a: { n: 'Ann', ship: 99, mods: { pierce: 9, nope: 1 }, kills: -1 }, ['x'.repeat(200)]: { n: 'long' } },
     result: { cleared: 'yes', cause: 99, zone: 5 },
+    top: [[1e12, 'x'.repeat(50), 5], 'x', [NaN], [5, 'CHORD', '2-1'], [1, 'a', 'b'], [2, 'c', 'd']],
   });
+  assert.equal(r.top.length, 1, 'only well-formed payouts, out of the first three');
+  assert.equal(r.top[0][0], 99_999_999);
+  assert.ok(r.top[0][1].length <= 16);
   assert.equal(r.seed, 0);
   assert.equal(r.oc, 8);
   assert.equal(r.idx, 0);

@@ -372,6 +372,7 @@ export const shipMethods = {
       return;
     }
     ship.contact++;
+    if (ship.contact === 1 && this.step >= ship.inv) this.event('warn', ship.idx, lane);
     if (ship.contact > SHIP.contactGraceTicks * STEPS_PER_TICK) {
       const cause = { [E.FUSEBALL]: DEATH.fuseball, [E.GHOST]: DEATH.ghost, [E.WEAVER]: DEATH.weaver, [E.SIREN]: DEATH.siren, [E.BOMBER]: DEATH.bomber, [E.PULSAR]: DEATH.pulsar }[touching] || DEATH.flipper;
       this.down(ship, cause);
