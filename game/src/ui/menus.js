@@ -213,13 +213,15 @@ export class Menus {
       vec.begin();
       shipIcon(vec, ship, px + 14, y + h / 2, 10);
       vec.glow(p.id === room.me.id ? WHITE : hue, 1.1, p.connected === false ? 0.3 : 0.85);
-      app.nameText(p.name || 'PLAYER', px + 30, y + h / 2 - 7, cw - 48, p.id === room.host);
+      const end = app.nameText(p.name || 'PLAYER', px + 30, y + h / 2 - 7, cw - 48, p.id === room.host);
       const ready = p.ready || p.id === room.host;
       if (ready && app.session.match.phase === 'lobby') {
+        // The ready mark follows the name.
+        const cx = Math.min(px + cw - 16, end + 8);
         vec.begin();
-        vec.move(px + cw - 16, y + h / 2 + 2);
-        vec.to(px + cw - 11, y + h / 2 + 7);
-        vec.to(px + cw - 3, y + h / 2 - 3);
+        vec.move(cx, y + h / 2 + 2);
+        vec.to(cx + 5, y + h / 2 + 7);
+        vec.to(cx + 13, y + h / 2 - 3);
         vec.glow(WHITE, 1.2, 0.9);
       }
     }

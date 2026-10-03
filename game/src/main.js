@@ -15,7 +15,7 @@ import { Session } from './net/session.js';
 import { Play } from './play.js';
 import { World, PHASE } from './sim/world.js';
 import { Bot } from './sim/bot.js';
-import { WORLDS, E } from './sim/data.js';
+import { WORLDS, E, STEPS_PER_BAR } from './sim/data.js';
 import { parseProfile, recordRun, SAVE_KEY, TINTS, TRAILS, RIMS, TAPES, met, shipUnlocked, ocAllowed } from './sim/profile.js';
 import { zoneFor, TEMPOS } from './sim/run.js';
 import { runPoster } from './poster.js';
@@ -449,6 +449,7 @@ class App {
       v.to(cx, cy - 4);
       v.glow(this.hue(), 1, 0.9);
     }
+    return x + w + room;
   }
 
   nameAt(name, x, y, maxW, col, alpha) {
@@ -529,7 +530,17 @@ class App {
         this.attract.ships[0].gone = true;
       }
       this.attractBot = spec.demo ? new Bot('expert', 7) : null;
-      this.attractT = 0;
+      if (spec.demo) {
+        // The demo opens mid-wave: things are already climbing on the first frame of the title.
+        const w = this.attract;
+        const live = () => w.enemies.reduce((n, e) => n + (e.dead ? 0 : 1), 0);
+        for (let i = 0; i < 12 * STEPS_PER_BAR && !(w.phase === PHASE.PLAY && live() >= 5); i++) {
+          this.attractBot.drive(w, w.ships[0]);
+          w.update();
+        }
+        w.drain();
+      }
+      this.attractT = this.attract.step * this.attract.dt;
       this.attractWorld = spec.world;
       this.stageKey = spec.key;
       this.view.setWeb(this.attract.web, def.hue, Boolean(def.spin));
