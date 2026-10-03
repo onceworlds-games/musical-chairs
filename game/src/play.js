@@ -1,7 +1,7 @@
 // A zone being played (or watched): the song clock, the fixed steps, the local ship's controls, and what every event
 // sounds and looks like. The host's page also publishes what happened; a mirror's page sends its own moments up.
 import { PHASE, DEATH_NAMES } from './sim/world.js';
-import { E, ENEMIES, WORLDS, STEPS_PER_BEAT, STEPS_PER_BAR, TICKS_PER_BAR, COUNTIN_BARS } from './sim/data.js';
+import { E, WORLDS, STEPS_PER_BEAT } from './sim/data.js';
 import { zoneLabel } from './sim/run.js';
 import { laneOf } from './sim/web.js';
 

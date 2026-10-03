@@ -1,7 +1,7 @@
 // The heads-up display, in the stroke font: score and multiplier with the beat ring (top right), ships and zaps,
 // the zone (top centre, clear of the platform's buttons at the top left), Resonance and Overdrive along the bottom,
 // the boss's health, and the big words of the moment ("PERFECT BAR", "CHORD", "ZONE 3").
-import { RESONANCE_MAX, STEPS_PER_BEAT } from '../sim/data.js';
+import { RESONANCE_MAX } from '../sim/data.js';
 
 const WHITE = '#ffffff';
 

@@ -15,9 +15,9 @@ import { Session } from './net/session.js';
 import { Play } from './play.js';
 import { World, PHASE } from './sim/world.js';
 import { Bot } from './sim/bot.js';
-import { WORLDS, SHIPS, MODS, E } from './sim/data.js';
+import { WORLDS, E } from './sim/data.js';
 import { parseProfile, recordRun, SAVE_KEY, TINTS, TRAILS, RIMS, TAPES, met, shipUnlocked, ocAllowed } from './sim/profile.js';
-import { zoneFor, dayOf, TEMPOS } from './sim/run.js';
+import { zoneFor, TEMPOS } from './sim/run.js';
 import { runPoster } from './poster.js';
 import { RIM_ORDER } from './ui/menus.js';
 

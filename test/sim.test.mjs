@@ -7,7 +7,7 @@ import { Rng, hash32 } from '../game/src/sim/rng.js';
 import { makeWeb, SHAPES, laneDelta, laneOf, wrapU, opposite } from '../game/src/sim/web.js';
 import { buildZone, validateZone } from '../game/src/sim/levelgen.js';
 import { zoneFor, draftOptions, cleanMods, dailyFor, zoneCount, addMod } from '../game/src/sim/run.js';
-import { E, MODS, SHIPS, WORLDS, STEPS_PER_BAR, STEPS_PER_BEAT, STEPS_PER_TICK, COUNTIN_BARS } from '../game/src/sim/data.js';
+import { E, MODS, SHIPS, WORLDS, STEPS_PER_BAR, STEPS_PER_BEAT } from '../game/src/sim/data.js';
 import { spawnEnemy, S } from '../game/src/sim/enemies.js';
 import { playRun } from '../game/src/sim/headless.js';
 

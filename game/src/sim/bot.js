@@ -3,8 +3,8 @@
 // same inputs a player does: a target lane, Fire, Hop and Zap.
 import { Rng, hash32 } from './rng.js';
 import { E, STEPS_PER_BEAT, STEPS_PER_TICK, TICKS_PER_BAR, MODS, ENEMIES } from './data.js';
-import { laneOf, laneDelta, laneDist, wrapU } from './web.js';
-import { hitLane, S } from './enemies.js';
+import { laneOf, laneDelta, laneDist } from './web.js';
+import { S } from './enemies.js';
 import { PHASE } from './world.js';
 import { partOpen, ROLE } from './bosses.js';
 
