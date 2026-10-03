@@ -96,9 +96,9 @@ const PAGE = (scene, seconds, calm) => `(async () => {
 })()`;
 
 const scenes = [
-  ['vermilion', { world: 3, level: 3 }, 24],
-  ['maestro', { world: 5, level: 4 }, 24],
-];
+  ['vermilion', { world: 3, level: 3 }, 20],
+  ['maestro', { world: 5, level: 4 }, 20],
+].filter(([name]) => !process.env.ONLY || process.env.ONLY === name);
 const results = [];
 try {
   for (const calm of [false, true]) {

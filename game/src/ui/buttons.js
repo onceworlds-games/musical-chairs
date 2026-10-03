@@ -86,7 +86,8 @@ export class Buttons {
         c.fillRect(b.x, b.y, b.w, b.h);
         c.globalAlpha = 1;
       }
-      const k = b.off ? 0.3 : b.on ? 1 : lit ? 0.95 : 0.6;
+      // The one big button breathes slowly (not in Calm): it is the thing to press.
+      const k = (b.off ? 0.3 : b.on ? 1 : lit ? 0.95 : 0.6) + (b.big && !calm && !b.off ? 0.12 * Math.sin(t * 2.6) : 0);
       const col = b.on || lit ? '#ffffff' : b.color || hue;
       if (b.frame !== false) {
         // A box with bright corner ticks.

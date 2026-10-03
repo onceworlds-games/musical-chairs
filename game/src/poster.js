@@ -476,6 +476,7 @@ function icon(vec, W, H) {
     }
   }
   vec.glow(WHITE, W / 70, 1.25);
+  bloom(vec, W, H);
 }
 
 const BADGES = {
@@ -635,4 +636,5 @@ function badge(vec, W, H, id) {
   vec.begin();
   draw(vec, c, W * 0.27);
   vec.glow(hue, W / 75, 1.15);
+  bloom(vec, W, H);
 }

@@ -58,7 +58,7 @@ export class View {
   fit() {
     const web = this.web;
     if (!web || !this.W) return;
-    const side = this.W < 420 ? 8 : 14;
+    const side = this.W < 380 ? 6 : this.W < 420 ? 8 : 14;
     const availW = Math.max(40, this.W - side * 2);
     const availH = Math.max(40, this.H - this.top - this.bottom);
     let ux; // the web's unit size across and down, with its margin
@@ -88,7 +88,7 @@ export class View {
         y0 = Math.min(y0, p[1]);
         y1 = Math.max(y1, p[1]);
       }
-      ux = (x1 - x0) * 1.06;
+      ux = (x1 - x0) * 1.03;
       uy = (y1 - y0) * 1.1;
     }
     const fx = availW / ux;
