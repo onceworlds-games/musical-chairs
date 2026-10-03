@@ -260,7 +260,9 @@ export class Session {
         room.setOpen(true);
       } catch {}
     }
-    if (!run || run.status === 'over' || (run.status === 'draft' && run.mid !== m.id)) {
+    // A new match the record has not seen: the next zone of a run in its draft, or a fresh run. (A record that names
+    // this very match as over or drafting is a zone that just ended: the match is about to close, not to restart.)
+    if (!run || (run.mid !== m.id && (run.status === 'over' || run.status === 'draft'))) {
       this.beginZone(m, run && run.status === 'draft' ? run : null);
       return;
     }

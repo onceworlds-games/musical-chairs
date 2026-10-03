@@ -145,3 +145,36 @@ test('a lost zone ends the run with its cause', async () => {
   assert.equal(s.run.result.cleared, false);
   assert.equal(s.run.result.cause, 3);
 });
+
+test('a zone that just ended is not restarted while its match closes', async () => {
+  const s = new Session(app());
+  await s.connect();
+  s.start();
+  await tick();
+  s.update();
+  const w = s.world;
+  w.spawns = [];
+  while (w.phase === PHASE.COUNTIN) w.update();
+  for (let k = 0; k < 3; k++) {
+    const ship = w.ships[0];
+    ship.state = 'live';
+    ship.inv = 0;
+    w.down(ship, 1);
+  }
+  // Hold the match open: the platform takes a moment to close it.
+  const end = s.room.endMatch.bind(s.room);
+  s.room.endMatch = () => {};
+  s.finishZone();
+  const rid = s.run.rid;
+  for (let i = 0; i < 5; i++) s.update();
+  assert.equal(s.run.rid, rid, 'the same run');
+  assert.equal(s.run.status, 'over');
+  assert.equal(s.run.result.ended, false);
+  s.room.endMatch = end;
+  s.room.endMatch();
+  await tick();
+  s.update();
+  assert.equal(s.run.status, 'over');
+  assert.equal(s.run.result.cause, 1);
+});
+
