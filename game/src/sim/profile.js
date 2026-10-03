@@ -66,6 +66,7 @@ export function defaults() {
     first: true,
     hints: {},
     daily: { day: -1, best: 0, done: false },
+    lastRun: '', // the run last folded in (a reload on the results never counts it twice)
   };
 }
 
@@ -90,6 +91,7 @@ export function parseProfile(raw) {
   if (raw.hints && typeof raw.hints === 'object' && !Array.isArray(raw.hints)) {
     for (const [k, n] of Object.entries(raw.hints).slice(0, 24)) if (typeof k === 'string' && k.length < 16) p.hints[k] = int(n, 0, 99, 0);
   }
+  if (typeof raw.lastRun === 'string') p.lastRun = raw.lastRun.slice(0, 80);
   if (raw.daily && typeof raw.daily === 'object') {
     p.daily = { day: int(raw.daily.day, -1, 1e7, -1), best: int(raw.daily.best, 0, 99_999_999, 0), done: raw.daily.done === true };
   }
@@ -136,6 +138,7 @@ export function needLabel(need) {
 export function recordRun(old, r) {
   const p = parseProfile(old);
   const before = unlockState(p);
+  if (r.rid) p.lastRun = String(r.rid).slice(0, 80);
   p.runs++;
   p.kills += r.kills | 0;
   p.chords += r.chords | 0;

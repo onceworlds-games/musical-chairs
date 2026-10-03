@@ -43,6 +43,7 @@ class App {
     this.paused = false;
     this.menuOpen = false; // the platform's menu
     this.awarded = new Set();
+    this.tally = { rid: '', perfect: 0, od: 0 }; // this run's Perfect Bars and Overdrives, for the profile
     this.unlocked = [];
     this.newBest = false;
     this.saveAt = 0;
@@ -285,6 +286,8 @@ class App {
       this.engine.setDuck(this.menuOpen);
     }
     this.layoutView();
+    // Keys pressed on the last screen do nothing on this one.
+    for (const k of ['left', 'right', 'fire', 'confirm', 'pause', 'hop', 'zap']) this.input.edges[k] = false;
     if (next === 'lobby') {
       this.menus.look = false;
       this.recordResults();
@@ -310,6 +313,7 @@ class App {
   // ---------------------------------------------------------------- the zone
 
   onZoneStart(w, zone, run) {
+    if (this.tally.rid !== run.rid) this.tally = { rid: run.rid, perfect: 0, od: 0 };
     this.play.begin(w, zone, run);
     this.play.ended = false;
     this.layoutView();
@@ -580,6 +584,7 @@ class App {
         return [];
       case 'lobby': {
         const screen = s.lobbyScreen();
+        if (screen === 'results') this.recordResults(); // once per run (the record may arrive after the lobby)
         if (this.input.take('pause') && this.menus.look) this.menus.look = false;
         if (this.input.take('confirm')) this.press('start');
         const left = this.input.take('left');
@@ -629,6 +634,9 @@ class App {
         this.profile.ship = i;
         this.saveSoon();
         this.music.pick();
+        // Someone new picking their ship in the draft is ready for the next zone.
+        const run = s.run;
+        if (run && run.status === 'draft' && !run.players[s.room.me.id] && !s.isHost) s.setReady(true);
         return;
       }
       case 'mode':
@@ -724,7 +732,8 @@ class App {
     const s = this.session;
     const run = s.run;
     if (!run || run.status !== 'over' || !run.players[s.room.me.id]) return;
-    if (!s.shouldRecord(run.rid)) return;
+    if (this.profile.lastRun === run.rid || !s.shouldRecord(run.rid)) return;
+    const tally = this.tally.rid === run.rid ? this.tally : { perfect: 0, od: 0 };
     const me = run.players[s.room.me.id];
     const r = run.result || {};
     const before = run.mode === 'descent' ? this.profile.bestDescent : this.profile.best;
@@ -738,10 +747,11 @@ class App {
       oc: run.oc,
       kills: me.kills,
       chords: me.chords,
-      perfect: 0,
+      perfect: tally.perfect,
       tether: me.tether,
       flawless: run.stats.flawless,
-      od: 0,
+      od: tally.od,
+      rid: run.rid,
       day: run.daily?.day,
       mods: Object.keys(me.mods),
     });

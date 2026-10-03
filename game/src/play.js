@@ -234,6 +234,7 @@ export class Play {
         hud.say('PERFECT BAR', { kind: 'small', life: 1.2, color: this.hue });
         music.perfect();
         app.award('perfect-bar');
+        app.tally.perfect++;
         share('p');
         break;
       case 'mult':
@@ -243,6 +244,7 @@ export class Play {
         hud.say('OVERDRIVE', { life: 1.4, priority: 3, color: WHITE });
         music.overdrive(true);
         app.award('overdrive');
+        app.tally.od++;
         share('o');
         break;
       case 'down': {
