@@ -14,7 +14,7 @@ export const STANZA_BARS = 8;
 export const STANZAS = 3;
 export const BOSS_BARS = 40; // a boss that outlasts this many bars starts to hurry (its attacks double)
 export const VAMP_BARS = 8; // after the last stanza, survivors get this long before they scatter
-export const WARP_BARS = 2;
+export const WARP_BARS = 1;
 
 /** Seconds per simulation step at a tempo. */
 export const stepSeconds = (bpm) => 60 / bpm / TICKS_PER_BEAT / STEPS_PER_TICK;
@@ -29,7 +29,7 @@ export const SHIP = {
   respawnInvulnBeats: 2,
   lives: 3,
   maxLives: 6,
-  contactGraceTicks: 1, // a crawler that lands in your lane has one sixteenth before it catches you
+  contactGraceTicks: 1.5, // a crawler that lands in your lane has a dotted sixteenth before it catches you
   maxBolts: 200, // across every ship
 };
 
@@ -92,7 +92,7 @@ export const WORLDS = [
     key: 'mint',
     name: 'MINT CIRCUIT',
     hue: '#3dffb0',
-    bpm: 104,
+    bpm: 108,
     root: 50, // D3
     mode: 'dorian',
     chords: [0, 3, 5, 3], // scale degrees: i IV VI IV
@@ -100,6 +100,7 @@ export const WORLDS = [
     bossShape: 'circle',
     boss: 'hydra',
     pace: 1,
+    tough: 1, // hit points of a plain enemy here
     budget: 40,
     pool: { [E.FLIPPER]: 10, [E.TANKER]: 3, [E.SPIKER]: 3 },
     cargo: E.FLIPPER,
@@ -109,15 +110,16 @@ export const WORLDS = [
     key: 'amber',
     name: 'AMBER FOLD',
     hue: '#ffb13d',
-    bpm: 110,
+    bpm: 114,
     root: 55, // G3
     mode: 'mixolydian',
     chords: [0, 6, 3, 0],
     shapes: ['square', 'bowtie', 'triangle'],
     bossShape: 'octagon',
     boss: 'gate',
-    pace: 1.06,
-    budget: 46,
+    pace: 1.08,
+    tough: 1, // hit points of a plain enemy here
+    budget: 50,
     pool: { [E.FLIPPER]: 9, [E.TANKER]: 3, [E.SPIKER]: 3, [E.FUSEBALL]: 3, [E.WEAVER]: 3 },
     cargo: E.FLIPPER,
     shots: 0.08,
@@ -126,7 +128,7 @@ export const WORLDS = [
     key: 'ice',
     name: 'ICE SPIRE',
     hue: '#8fe3ff',
-    bpm: 116,
+    bpm: 120,
     root: 53, // F3
     mode: 'lydian',
     chords: [0, 1, 4, 0],
@@ -134,98 +136,104 @@ export const WORLDS = [
     bossShape: 'star',
     boss: 'conductor',
     pace: 1.12,
-    budget: 52,
+    tough: 1.5, // hit points of a plain enemy here
+    budget: 50,
     pool: { [E.FLIPPER]: 8, [E.TANKER]: 3, [E.SPIKER]: 2, [E.FUSEBALL]: 3, [E.WEAVER]: 2, [E.PULSAR]: 3, [E.GHOST]: 3 },
     cargo: E.PULSAR,
-    shots: 0.1,
+    shots: 0.11,
   },
   {
     key: 'vermilion',
     name: 'VERMILION GATE',
     hue: '#ff4a2b',
-    bpm: 122,
+    bpm: 126,
     root: 52, // E3
     mode: 'phrygian',
     chords: [0, 1, 3, 1],
     shapes: ['hourglass', 'cross', 'heptagon'],
     bossShape: 'hourglass',
     boss: 'tide',
-    pace: 1.18,
-    budget: 58,
+    pace: 1.4,
+    tough: 1.75, // hit points of a plain enemy here
+    budget: 104,
     pool: { [E.FLIPPER]: 8, [E.TANKER]: 3, [E.SPIKER]: 3, [E.FUSEBALL]: 3, [E.WEAVER]: 2, [E.PULSAR]: 2, [E.GHOST]: 2, [E.BOMBER]: 2 },
     cargo: E.FUSEBALL,
-    shots: 0.12,
+    shots: 0.13,
   },
   {
     key: 'lime',
     name: 'LIME RIBBON',
     hue: '#b6ff3d',
-    bpm: 128,
+    bpm: 132,
     root: 57, // A3
     mode: 'aeolian',
     chords: [0, 5, 2, 6],
     shapes: ['flat', 'cup', 'spiral'],
     bossShape: 'flat',
     boss: 'mirror',
-    pace: 1.24,
-    budget: 64,
+    pace: 1.55,
+    tough: 1.75, // hit points of a plain enemy here
+    budget: 124,
     pool: { [E.FLIPPER]: 8, [E.TANKER]: 2, [E.SPIKER]: 2, [E.FUSEBALL]: 3, [E.WEAVER]: 3, [E.PULSAR]: 2, [E.GHOST]: 2, [E.BOMBER]: 2, [E.SIREN]: 3 },
     cargo: E.FLIPPER,
-    shots: 0.14,
+    shots: 0.15,
   },
   {
     key: 'rose',
     name: 'ROSE ORBIT',
     hue: '#ff5c8a',
-    bpm: 134,
+    bpm: 138,
     root: 48, // C3
     mode: 'harmonic',
     chords: [0, 5, 3, 4],
     shapes: ['rose', 'pentagon', 'circle'],
     bossShape: 'circle',
     boss: 'maestro',
-    pace: 1.3,
-    budget: 70,
+    pace: 1.7,
+    tough: 2, // hit points of a plain enemy here
+    budget: 144,
     pool: { [E.FLIPPER]: 8, [E.TANKER]: 3, [E.SPIKER]: 2, [E.FUSEBALL]: 3, [E.WEAVER]: 2, [E.PULSAR]: 3, [E.GHOST]: 2, [E.BOMBER]: 2, [E.SIREN]: 3 },
     cargo: E.PULSAR,
     spin: 0.11, // radians per second: these webs turn
-    shots: 0.16,
+    shots: 0.17,
   },
   // The Descent's own worlds (after the six, they alternate with the others at rising tempo).
   {
     key: 'gold',
     name: 'GOLD DEPTHS',
     hue: '#ffd23d',
-    bpm: 120,
+    bpm: 124,
     root: 55,
     mode: 'ionian',
     chords: [0, 4, 5, 3],
     shapes: ['zigzag', 'steps', 'octagon', 'hourglass'],
     bossShape: 'octagon',
     boss: 'gate',
-    pace: 1.2,
-    budget: 62,
+    pace: 1.45,
+    tough: 1.75, // hit points of a plain enemy here
+    budget: 110,
     pool: { [E.FLIPPER]: 8, [E.TANKER]: 3, [E.SPIKER]: 3, [E.FUSEBALL]: 3, [E.WEAVER]: 3, [E.PULSAR]: 2, [E.GHOST]: 2, [E.BOMBER]: 2, [E.SIREN]: 2 },
     cargo: E.FUSEBALL,
-    shots: 0.12,
+    shots: 0.14,
   },
   {
     key: 'sky',
     name: 'SKY DEPTHS',
     hue: '#5cb8ff',
-    bpm: 124,
+    bpm: 128,
     root: 53,
     mode: 'lydian',
     chords: [0, 1, 5, 4],
     shapes: ['clover', 'vee', 'star', 'spiral'],
     bossShape: 'star',
     boss: 'conductor',
-    pace: 1.24,
-    budget: 64,
+    pace: 1.5,
+    tough: 1.75, // hit points of a plain enemy here
+    budget: 116,
     pool: { [E.FLIPPER]: 8, [E.TANKER]: 3, [E.SPIKER]: 2, [E.FUSEBALL]: 3, [E.WEAVER]: 3, [E.PULSAR]: 3, [E.GHOST]: 3, [E.BOMBER]: 2, [E.SIREN]: 2 },
     cargo: E.PULSAR,
     spin: 0.07,
-    shots: 0.12,
+    shots: 0.15,
   },
 ];
 
@@ -236,21 +244,21 @@ export const LEVELS_PER_WORLD = 4; // three zones and a boss
 export const BOSSES = {
   hydra: { name: 'HYDRA', secs: 30 },
   gate: { name: 'GATE', secs: 34 },
-  conductor: { name: 'CONDUCTOR', secs: 30 },
+  conductor: { name: 'CONDUCTOR', secs: 16 },
   tide: { name: 'TIDE', secs: 38 },
   mirror: { name: 'MIRROR', secs: 40 },
-  maestro: { name: 'MAESTRO', secs: 70 },
+  maestro: { name: 'MAESTRO', secs: 90 },
 };
 
 // ------------------------------------------------------------------ ships
 // rate: ticks between bolts (1 = sixteenths). dmg per bolt. speed in z/s. range: where bolts fade (1 = the far end).
 export const SHIPS = [
   { key: 'plectrum', name: 'PLECTRUM', rate: 1, dmg: 1, speed: 1.6, range: 1, tag: 'STEADY SIXTEENTHS' },
-  { key: 'mallet', name: 'MALLET', rate: 2, dmg: 1.25, speed: 2.1, range: 0.62, spread: 1, tag: 'THREE LANES, CLOSE' },
+  { key: 'mallet', name: 'MALLET', rate: 2, dmg: 1.25, speed: 2.1, range: 0.7, spread: 1, tag: 'THREE LANES, CLOSE' },
   { key: 'reed', name: 'REED', rate: 1, dmg: 0.85, speed: 1.45, range: 1, homing: 1, tag: 'NOTES THAT SEEK' },
-  { key: 'bow', name: 'BOW', rate: 2, dmg: 1.4, speed: 2.7, range: 1, pierceAll: 1, tag: 'A BEAM THAT PIERCES' },
-  { key: 'chime', name: 'CHIME', rate: 4, dmg: 2.2, speed: 1.7, range: 1, drones: 2, tag: 'DRONES PLAY ALONG' },
-  { key: 'fork', name: 'FORK', rate: 1, dmg: 1, speed: 1.6, range: 1, tines: 1, tag: 'TWO TINES, ONE HUM' },
+  { key: 'bow', name: 'BOW', rate: 2, dmg: 2, speed: 2.7, range: 1, pierceAll: 1, tag: 'A BEAM THAT PIERCES' },
+  { key: 'chime', name: 'CHIME', rate: 2, dmg: 1.2, speed: 1.7, range: 1, drones: 2, tag: 'DRONES PLAY ALONG' },
+  { key: 'fork', name: 'FORK', rate: 2, dmg: 1.15, speed: 1.7, range: 1, tines: 1, tag: 'TWO TINES, ONE HUM' },
 ];
 
 /** What unlocks each ship (checked against the profile). */
@@ -266,10 +274,10 @@ export const SHIP_UNLOCKS = {
 // ------------------------------------------------------------------ mods
 // max: how many times it stacks. coop: offered only when others play. Every effect lives in world.js.
 export const MODS = [
-  { key: 'pierce', name: 'PIERCE', max: 3, tag: 'BOLTS PASS THROUGH' },
+  { key: 'pierce', name: 'PIERCE', max: 2, tag: 'BOLTS PASS THROUGH' },
   { key: 'spread', name: 'SPREAD', max: 2, tag: 'SIDE LANES TOO' },
   { key: 'echo', name: 'ECHO', max: 2, tag: 'REPEAT NEXT BEAT' },
-  { key: 'ricochet', name: 'RICOCHET', max: 2, tag: 'BOUNCE OFF THE FAR END' },
+  { key: 'ricochet', name: 'RICOCHET', max: 1, tag: 'BOUNCE OFF THE FAR END' },
   { key: 'counterpoint', name: 'COUNTERPOINT', max: 1, tag: 'A BOLT ACROSS THE WEB' },
   { key: 'tremolo', name: 'TREMOLO', max: 1, tag: 'TRIPLETS: FASTER FIRE' },
   { key: 'staccato', name: 'STACCATO', max: 2, tag: 'FASTER BOLTS' },
@@ -277,16 +285,16 @@ export const MODS = [
   { key: 'metronome', name: 'METRONOME', max: 2, tag: 'ON-BEAT BOLTS HIT HARD' },
   { key: 'syncopate', name: 'SYNCOPATE', max: 2, tag: 'OFFBEAT BOLTS FLY' },
   { key: 'glissando', name: 'GLISSANDO', max: 1, tag: 'BOLTS BEND TO TARGETS' },
-  { key: 'chain', name: 'CHAIN', max: 3, tag: 'KILLS ARC SIDEWAYS' },
+  { key: 'chain', name: 'CHAIN', max: 2, tag: 'KILLS ARC SIDEWAYS' },
   { key: 'downbeat', name: 'DOWNBEAT', max: 2, tag: 'FIRST KILL BLASTS ITS LANE' },
   { key: 'phasehop', name: 'PHASE HOP', max: 2, tag: 'HOPS BURN THE RIM' },
   { key: 'gracenote', name: 'GRACE NOTE', max: 2, tag: 'LONGER, QUICKER HOPS' },
   { key: 'bassdrop', name: 'BASS DROP', max: 2, tag: 'KILLS RECHARGE ZAP' },
   { key: 'forte', name: 'FORTE', max: 2, tag: 'WIDER ZAP' },
-  { key: 'shieldbeat', name: 'SHIELD BEAT', max: 2, tag: 'A SHIELD EVERY 8 BARS' },
-  { key: 'encore', name: 'ENCORE', max: 2, tag: 'ONE MORE SHIP' },
+  { key: 'shieldbeat', name: 'SHIELD BEAT', max: 2, tag: 'A SHIELD NOW AND THEN' },
+  { key: 'encore', name: 'ENCORE', max: 1, tag: 'ONE MORE SHIP' },
   { key: 'undertow', name: 'UNDERTOW', max: 2, tag: 'SLOW THE NEAR END' },
-  { key: 'rimguard', name: 'RIM GUARD', max: 1, tag: 'A SPARK EACH BAR' },
+  { key: 'rimguard', name: 'RIM GUARD', max: 1, tag: 'A SPARK EVERY 2 BARS' },
   { key: 'resonator', name: 'RESONATOR', max: 2, tag: 'FASTER RESONANCE' },
   { key: 'overtone', name: 'OVERTONE', max: 2, tag: 'LONGER OVERDRIVE' },
   { key: 'feedback', name: 'FEEDBACK', max: 1, tag: 'KILLS EXTEND OVERDRIVE' },

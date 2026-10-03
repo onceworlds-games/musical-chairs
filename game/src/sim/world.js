@@ -62,7 +62,8 @@ export class World {
     this.pace = world.pace * (1 + 0.02 * Math.max(0, zone.depth || 0)) * (zone.practicePace || 1);
     this.flipEvery = world.pace >= 1.15 ? 3 : 4; // ticks between a climbing flipper's turns
     this.shotChance = zone.guided || (zone.world === 0 && zone.level === 1) ? 0 : Math.min(0.35, (world.shots || 0) * (this.oc >= 2 ? 1.8 : 1) * (zone.level >= 3 ? 1.2 : 1));
-    this.hpMul = 1 + 0.25 * Math.floor((zone.world || 0) / 2);
+    // Deeper worlds' enemies take more hitting (fractions matter: 1.25 needs two plain bolts, or one heavy one).
+    this.tough = (world.tough || 1) + 0.03 * Math.max(0, zone.depth || 0);
     this.rng = new Rng(hash32('sim', zone.seed, zone.world, zone.level, zone.depth || 0));
     zone.n = this.n;
     zone.closed = this.web.closed;
@@ -142,7 +143,7 @@ export class World {
       inv: STEPS_PER_BEAT,
       hopCd: 0,
       zaps: 1, // a zap a zone; pickups and Bass Drop add a second
-      shield: mod({ mods }, 'shieldbeat') > 0,
+      shield: false, // Shield Beat's first shield forms on its bar line
       charge: 0,
       chargeLane: -1,
       wasFiring: false,
@@ -205,7 +206,7 @@ export class World {
     if (tickEdge) this.tick = s / STEPS_PER_TICK;
     const barEdge = s % STEPS_PER_BAR === 0;
     if (barEdge) this.onBar();
-    if (tickEdge && s % STEPS_PER_BEAT === 0) this.onBeat();
+    if (tickEdge && s % (STEPS_PER_BEAT / 2) === 0) this.hum();
 
     // The phase machine.
     if (this.phase === PHASE.COUNTIN && this.tick >= COUNTIN_BARS * TICKS_PER_BAR) {
@@ -278,8 +279,10 @@ export class World {
     return c;
   }
 
-  onBeat() {
-    // Fork's hum and the tether burn on the beat.
+  onBeat() {}
+
+  /** Fork's hum: on every eighth note it burns whatever sits on the rim in its own lane. */
+  hum() {
     for (const ship of this.ships) {
       if (ship.state !== 'live' || !ship.in.fire || !ship.def.tines || ship.kind === 'puppet') continue;
       const lane = laneOf(this.web, ship.u);
@@ -304,7 +307,7 @@ export class World {
     // Shield Beat: a shield forms every 8 bars (4 with two).
     for (const ship of this.ships) {
       const sb = mod(ship, 'shieldbeat');
-      if (sb && this.bar % (sb >= 2 ? 10 : 16) === 0 && !ship.shield) {
+      if (sb && this.bar % (sb >= 2 ? 24 : 32) === 0 && this.bar > 0 && !ship.shield) {
         ship.shield = true;
         this.event('shield', ship.idx, laneOf(this.web, ship.u));
       }
@@ -372,7 +375,7 @@ export class World {
     if (!this.web.closed) to = Math.max(0, Math.min(this.n - 1, to));
     ship.u = wrapU(this.web, to);
     ship.pu = ship.u;
-    ship.inv = Math.max(ship.inv, this.step + Math.round((SHIP.hopInvuln * (1 + gn)) / this.dt));
+    ship.inv = Math.max(ship.inv, this.step + Math.round((SHIP.hopInvuln + 0.15 * gn) / this.dt));
     ship.contact = 0;
     ship.charge = 0;
     const phase = (((this.step - ship.lat) % STEPS_PER_BEAT) + STEPS_PER_BEAT) % STEPS_PER_BEAT;
@@ -398,7 +401,7 @@ export class World {
       const lane = laneOf(this.web, from + dir * i);
       for (const e of this.enemies) {
         if (e.dead || e.type === E.PART) continue;
-        if (e.z < (ph >= 2 ? 0.3 : 0.07) && hitLane(this, e) === lane) this.damage(e, 2, ship.idx, 'phase');
+        if (e.z < (ph >= 2 ? 0.25 : 0.07) && hitLane(this, e) === lane) this.damage(e, ph >= 2 ? 3 : 1.5, ship.idx, 'phase');
       }
     }
   }
@@ -408,7 +411,7 @@ export class World {
     ship.zaps--;
     ship.bassKills = 0;
     const lane = laneOf(this.web, ship.u);
-    const radius = SHIP.zapRadius + 2 * mod(ship, 'forte');
+    const radius = SHIP.zapRadius + mod(ship, 'forte');
     this.event('zap', ship.idx, lane, 0, radius);
     for (const e of this.enemies) {
       if (e.dead) continue;
@@ -446,7 +449,7 @@ export class World {
       if (held && ship.chargeLane === lane) ship.charge++;
       else if (held) (ship.charge = 0), (ship.chargeLane = lane);
       if (released && ship.charge >= STEPS_PER_BEAT) {
-        this.spawnBolt(ship, lane, { dmg: sus >= 2 ? 6 : 4, pierce: 99, speed: 2.2, kind: 4 });
+        this.spawnBolt(ship, lane, { dmg: sus >= 2 ? 4.5 : 3, pierce: 99, speed: 2.2, kind: 4 });
         this.event('fire', ship.idx, lane, 0, 3, 1);
       }
       if (!held) ship.charge = 0;
@@ -462,7 +465,7 @@ export class World {
       if (this.step % every === 0) {
         for (const off of this.droneOffsets(ship, drones)) {
           if (!this.web.closed && (lane + off < 0 || lane + off > this.n - 1)) continue;
-          this.spawnBolt(ship, laneOf(this.web, lane + off), { dmg: 1, pierce: 0, speed: 1.6, kind: 5 });
+          this.spawnBolt(ship, laneOf(this.web, lane + off), { dmg: def.drones ? 0.8 : 1, pierce: 0, speed: 1.6, kind: 5 });
         }
       }
     }
@@ -475,20 +478,20 @@ export class World {
     const phase = (((this.step - ship.lat) % STEPS_PER_BEAT) + STEPS_PER_BEAT) % STEPS_PER_BEAT;
     const onBeat = phase <= 3 || phase >= STEPS_PER_BEAT - 3;
     const offBeat = Math.abs(phase - STEPS_PER_BEAT / 2) <= 3;
-    let dmg = def.dmg;
+    let dmg = def.dmg * (mod(ship, 'tremolo') ? 0.75 : 1);
     let pierce = mod(ship, 'pierce') + (def.pierceAll ? 99 : 0) + (this.overdrive ? 1 : 0);
-    let speed = def.speed * (1 + 0.4 * mod(ship, 'staccato'));
+    let speed = def.speed * (1 + 0.25 * mod(ship, 'staccato'));
     const met = mod(ship, 'metronome');
     const syn = mod(ship, 'syncopate');
-    if (met && onBeat) (dmg += met >= 2 ? 3 : 2), (pierce += 1);
-    if (syn && offBeat) (dmg += 1), (speed *= 1.5);
+    if (met && onBeat) dmg += met >= 2 ? 1.5 : 1;
+    if (syn && offBeat) (dmg += syn >= 2 ? 1 : 0.75), (speed *= 1.3);
     const opts = { dmg, pierce, speed, kind: 0, range: def.range };
     if (def.tines) {
-      // Two tines, a lane either side, taking turns.
-      const side = ship.shots % 2 ? 1 : -1;
-      const l = neighbour(this.web, lane, side);
-      if (l >= 0) this.spawnBolt(ship, l, opts);
-      else this.spawnBolt(ship, neighbour(this.web, lane, -side), opts);
+      // Two tines, a lane either side, together (at the end of an open web, both down the one there is).
+      const a = neighbour(this.web, lane, -1);
+      const b = neighbour(this.web, lane, 1);
+      this.spawnBolt(ship, a >= 0 ? a : b, opts);
+      this.spawnBolt(ship, b >= 0 ? b : a, opts);
     } else this.spawnBolt(ship, lane, opts);
     if (def.spread) {
       for (const side of [-1, 1]) {
@@ -497,16 +500,16 @@ export class World {
       }
     }
     const sp = mod(ship, 'spread');
-    if (sp && (sp >= 2 || ship.shots % 2 === 0)) {
+    if (sp && ship.shots % (sp >= 2 ? 2 : 3) === 0) {
       // Short side bolts: they guard the neighbouring lanes near the rim.
       for (const side of [-1, 1]) {
         const l = neighbour(this.web, lane, side);
-        if (l >= 0) this.spawnBolt(ship, l, { ...opts, dmg: dmg * 0.5, pierce: 0, kind: 1, range: 0.5 });
+        if (l >= 0) this.spawnBolt(ship, l, { ...opts, dmg: dmg * 0.4, pierce: 0, kind: 1, range: 0.45 });
       }
     }
-    if (mod(ship, 'counterpoint')) this.spawnBolt(ship, opposite(this.web, lane), { ...opts, dmg: dmg * 0.5, kind: 3 });
+    if (mod(ship, 'counterpoint')) this.spawnBolt(ship, opposite(this.web, lane), { ...opts, dmg: dmg * 0.4, kind: 3 });
     const echo = mod(ship, 'echo');
-    if (echo && ship.echoes.length < 16) ship.echoes.push([this.step + STEPS_PER_BEAT, lane, dmg * (echo >= 2 ? 0.6 : 0.4)]);
+    if (echo && ship.echoes.length < 16) ship.echoes.push([this.step + STEPS_PER_BEAT, lane, dmg * (echo >= 2 ? 0.45 : 0.3)]);
     this.event('fire', ship.idx, lane, 0, onBeat ? 1 : offBeat ? 2 : 0, pressed ? 1 : 0);
   }
 
@@ -563,6 +566,7 @@ export class World {
         if (b.bounces > 0 && b.range >= 1) {
           b.bounces--;
           b.dir = -1;
+          b.dmg *= 0.6;
           b.hit = null;
           this.event('bounce', b.owner, lane, 1);
         } else b.dead = true;
@@ -697,7 +701,7 @@ export class World {
       ship.zone.kills++;
       ship.bassKills++;
       const bd = mod(ship, 'bassdrop');
-      if (bd && ship.bassKills >= (bd >= 2 ? 25 : 40) && ship.zaps < 2) {
+      if (bd && ship.bassKills >= (bd >= 2 ? 40 : 60) && ship.zaps < 2) {
         ship.zaps++;
         ship.bassKills = 0;
         this.event('recharge', ship.idx, laneOf(this.web, ship.u), 0, ship.zaps);
@@ -722,11 +726,11 @@ export class World {
     // Resonance and Overdrive.
     if (!od) {
       const rz = Math.max(0, ...this.ships.map((s) => mod(s, 'resonator')));
-      this.addRes(def.res * (1 + 0.35 * rz));
+      this.addRes(def.res * (1 + 0.25 * rz));
     } else {
       const fb = this.ships.some((s) => mod(s, 'feedback'));
-      if (fb && this.odExtended < 10 / this.dt) {
-        const add = Math.round(0.15 / this.dt);
+      if (fb && this.odExtended < 6 / this.dt) {
+        const add = Math.round(0.1 / this.dt);
         this.odUntil += add;
         this.odExtended += add;
       }
@@ -747,8 +751,7 @@ export class World {
         for (const o of this.enemies) {
           if (o.dead || o === e || o.type === E.PART) continue;
           const d = laneDist(this.web, Math.round(o.lane), lane);
-          if (d === 0) this.damage(o, 2, ship.idx, 'chain');
-          else if (d === 1 && db >= 2) this.damage(o, 1, ship.idx, 'chain');
+          if (d === 0) this.damage(o, db >= 2 ? 2 : 1, ship.idx, 'chain');
         }
       }
     }
@@ -770,7 +773,7 @@ export class World {
       if (!best) return;
       hit.add(best);
       this.event('arc', ship.idx, from.lane, from.z, best.lane * 1000 + Math.round(best.z * 999), 0);
-      this.damage(best, 1, ship.idx, 'chain');
+      this.damage(best, 0.5, ship.idx, 'chain');
       from = best;
     }
   }
@@ -832,7 +835,7 @@ export class World {
     this.res = Math.min(RESONANCE_MAX, this.res + amount);
     if (this.res >= RESONANCE_MAX) {
       const ot = Math.max(0, ...this.ships.map((s) => mod(s, 'overtone')));
-      this.odUntil = this.step + Math.round((OVERDRIVE_SECONDS * (1 + 0.4 * ot)) / this.dt);
+      this.odUntil = this.step + Math.round((OVERDRIVE_SECONDS * (1 + 0.3 * ot)) / this.dt);
       this.odExtended = 0;
       this.res = 0;
       this.stats.od++;
@@ -849,8 +852,8 @@ export class World {
     // Rim Guard: the first to arrive each bar meets a spark.
     if (!this.auth) return;
     const guard = this.ships.find((s) => mod(s, 'rimguard') && s.state === 'live');
-    if (guard && this.rimGuardBar !== this.bar && e.type !== E.SHOT && e.type !== E.MINE && e.type !== E.PART) {
-      this.rimGuardBar = this.bar;
+    if (guard && Math.floor(this.bar / 2) !== this.rimGuardBar && e.type !== E.SHOT && e.type !== E.MINE && e.type !== E.PART) {
+      this.rimGuardBar = Math.floor(this.bar / 2);
       this.event('spark', guard.idx, e.lane, 0);
       this.kill(e, guard.idx, 'guard');
     }
@@ -1252,10 +1255,12 @@ export class World {
 
   compact() {
     if (this.enemies.some((e) => e.dead)) {
+      // A boss lets go of its fallen pieces before anything can reuse them.
+      if (this.boss) this.boss.parts = this.boss.parts.filter((p) => !p.dead);
       const keep = [];
       for (const e of this.enemies) {
         if (e.dead) {
-          if (this.pool.length < 128) this.pool.push(e);
+          if (this.pool.length < 128 && e.type !== E.PART) this.pool.push(e);
         } else keep.push(e);
       }
       this.enemies = keep;

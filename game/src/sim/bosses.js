@@ -11,6 +11,7 @@ import { spawnEnemy, nearestShip, S } from './enemies.js';
 import { laneOf, wrapU, laneDelta, laneDist, opposite } from './web.js';
 
 const ROLE = { CORE: 0, SEGMENT: 1, SHIELD: 2, MIRROR: 3 };
+const MOVEMENT_BARS = 14; // the Maestro's movements last at least this long, however hard it is hit
 
 export function makeBoss(w, kind) {
   const def = BOSSES[kind] ?? BOSSES.hydra;
@@ -118,8 +119,22 @@ function tideCore(w, boss) {
 }
 
 function mirrorPart(w, boss) {
-  const e = part(w, boss, opposite(w.web, w.web.start), 0.82, ROLE.MIRROR);
-  boss.mirror = e.lane;
+  // Three panes: a heart and two wings. Shots come down the heart's lane.
+  boss.mirror = opposite(w.web, w.web.start);
+  for (const b of [-1, 0, 1]) {
+    const e = part(w, boss, boss.mirror + b, 0.82, ROLE.MIRROR);
+    e.b = b;
+  }
+  placeMirror(w, boss);
+}
+
+function placeMirror(w, boss) {
+  for (const p of boss.parts) {
+    if (p.dead || p.a !== ROLE.MIRROR) continue;
+    let l = boss.mirror + p.b;
+    if (!w.web.closed) l = Math.max(0, Math.min(w.n - 1, l));
+    p.lane = wrapU(w.web, l);
+  }
 }
 
 // ------------------------------------------------------------------ the step
@@ -166,6 +181,26 @@ export function updateBoss(w, boss) {
     case 'mirror':
       mirrorTick(w, boss, inBar, bar);
       break;
+  }
+  // The Maestro layers a second line over each movement.
+  if (boss.kind === 'maestro') {
+    if (boss.phase === 0) cue(w, boss, inBar, bar, 1);
+    else if (boss.phase === 1) cue(w, boss, inBar, bar, 1);
+    else if (boss.phase === 2 && bar % 2 === 1) cue(w, boss, inBar, bar, 1);
+    else if (boss.phase >= 3 && bar % 2 === 1) cue(w, boss, inBar, bar, 1);
+  }
+}
+
+/** A cue: the lanes around a ship light on the downbeat and burn on beat 3 (move three lanes, or hop). */
+function cue(w, boss, inBar, bar, everyBars) {
+  if (bar % everyBars !== 0) return;
+  if (inBar === 0) {
+    const lanes = patternLanes(w, boss, 'around', bar);
+    boss.tele.push({ lanes, at: w.step + 8 * STEPS_PER_TICK, until: w.step + 12 * STEPS_PER_TICK, kind: 'cue' });
+    w.event('baton', 0, 0, 0, lanes.length);
+  } else if (inBar === 8) {
+    const t = boss.tele.find((x) => x.kind === 'cue' && x.at <= w.step + 1);
+    if (t) w.blast(t.lanes, STEPS_PER_BEAT);
   }
 }
 
@@ -250,7 +285,7 @@ function gateTick(w, boss, inBar, bar) {
       }
     }
   }
-  const volley = every(boss, 4);
+  const volley = boss.kind === 'maestro' ? every(boss, 2) : every(boss, 4);
   const gaps = gapLanes(w, boss);
   if (inBar % (volley * 4) === 4) boss.tele.push({ lanes: gaps, at: w.step + STEPS_PER_BEAT, until: w.step + STEPS_PER_BEAT, kind: 'volley' });
   if (inBar % (volley * 4) === 8 && w.enemies.length < 85) {
@@ -268,13 +303,17 @@ function gapLanes(w, boss) {
 
 // CONDUCTOR -----------------------------------------------------------
 
-const PATTERNS = ['alternate', 'halves', 'sweep', 'around', 'chord', 'halves'];
+const PATTERNS = {
+  conductor: ['halves', 'sweep', 'around', 'chord', 'sweep', 'around'],
+  maestro: ['alternate', 'around', 'chord', 'halves', 'sweep', 'alternate'],
+};
 
 function conductorTick(w, boss, inBar, bar) {
   const len = every(boss, 4) * 4; // ticks per cycle: a bar (half a bar when it hurries)
   const at = inBar % len;
   if (at === 0) {
-    const lanes = patternLanes(w, boss, PATTERNS[boss.pattern % PATTERNS.length], bar);
+    const list = PATTERNS[boss.kind] || PATTERNS.conductor;
+    const lanes = patternLanes(w, boss, list[boss.pattern % list.length], bar);
     boss.pattern++;
     boss.tele.push({ lanes, at: w.step + (len / 2) * STEPS_PER_TICK, until: w.step + (len / 2 + 4) * STEPS_PER_TICK, kind: 'baton' });
     w.event('baton', 0, 0, 0, lanes.length);
@@ -357,20 +396,22 @@ function tideTick(w, boss, inBar, bar) {
 // MIRROR --------------------------------------------------------------
 
 function mirrorTick(w, boss, inBar, bar) {
-  const m = boss.parts.find((p) => !p.dead && p.a === ROLE.MIRROR);
-  if (!m) return;
+  if (!boss.parts.some((p) => !p.dead && p.a === ROLE.MIRROR)) return;
   const late = boss.hp < boss.maxHp * 0.5;
-  // Where the nearest ship was a beat ago: across the web early on, the same lane later.
-  const t = nearestShip(w, Math.round(m.lane));
+  // Where the nearest ship was a beat ago: its reflection early on, its own lane later.
+  const t = nearestShip(w, Math.round(boss.mirror));
   const lane = t ? laneOf(w.web, t.ship.u) : w.web.start;
   boss.trail.push(lane);
   if (boss.trail.length > 4) boss.trail.shift();
   const was = boss.trail[0];
   const goal = late ? was : opposite(w.web, was);
-  const d = laneDelta(w.web, m.lane, goal);
-  // It drifts toward your reflection a lane per beat (two later on): dash across to catch it.
-  if (d !== 0 && inBar % (late ? 2 : 4) === 0) m.lane = wrapU(w.web, Math.round(m.lane) + Math.sign(d));
-  boss.mirror = m.lane;
+  const d = laneDelta(w.web, boss.mirror, goal);
+  // It glides a lane per beat toward the reflection: stand beside its heart and hit a wing.
+  if (d !== 0 && inBar % 4 === 0) {
+    boss.mirror = wrapU(w.web, Math.round(boss.mirror) + Math.sign(d));
+    placeMirror(w, boss);
+  }
+  const m = boss.parts.find((p) => !p.dead && p.a === ROLE.MIRROR && p.b === 0) || boss.parts.find((p) => !p.dead && p.a === ROLE.MIRROR);
   const period = every(boss, late ? 1 : 2) * 4;
   if (inBar % period === period - 2) boss.tele.push({ lanes: [laneOf(w.web, m.lane)], at: w.step + 2 * STEPS_PER_TICK, until: w.step + 2 * STEPS_PER_TICK, kind: 'aim' });
   if (inBar % period === 0 && w.enemies.length < 85) {
@@ -390,6 +431,7 @@ function maestroPhase(w, boss) {
   const phase = f > 0.75 ? 0 : f > 0.5 ? 1 : f > 0.25 ? 2 : boss.extra && f <= 0.1 ? 4 : 3;
   if (phase !== boss.phase) {
     boss.phase = phase;
+    boss.phaseAt = w.step;
     w.event('bossphase', 0, 0, 0, phase);
     // Each phase brings its own pieces and clears the last one's.
     for (const p of boss.parts) if (!p.dead && p.a !== ROLE.CORE) p.dead = true;
@@ -460,6 +502,18 @@ function breakShield(w, p) {
 }
 
 function hurt(w, boss, amount, by, p) {
+  let floor = 0;
+  if (boss.kind === 'maestro') {
+    // Each movement plays for at least four bars: its HP stops at the next threshold until then.
+    const marks = [0.75, 0.5, 0.25, 0];
+    const mark = marks[Math.min(3, boss.phase)];
+    if (w.step - (boss.phaseAt ?? boss.activeAt) < STEPS_PER_BAR * MOVEMENT_BARS) floor = boss.maxHp * mark + 0.5;
+  }
+  if (floor > 0 && boss.hp - amount < floor) {
+    if (boss.hp > floor) boss.hp = floor;
+    w.event('clink', p.id, p.lane, p.z);
+    return;
+  }
   boss.hp = Math.max(0, boss.hp - amount);
   if (w.auth && by >= 0) w.addScore(Math.round(25 * amount * w.mult), by);
   w.event('bosshit', p.id, p.lane, p.z, Math.round(boss.hp), by);

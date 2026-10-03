@@ -9,9 +9,9 @@ import { PHASE } from './world.js';
 import { partOpen, ROLE } from './bosses.js';
 
 export const SKILLS = {
-  novice: { react: 22, aware: 0.5, noise: 0.16, hop: 0.15, zapAt: 6, zapWill: 0.5, fire: 0.85, spikes: 0, beatHop: 0, lookShots: 0.5 },
-  average: { react: 14, aware: 0.84, noise: 0.06, hop: 0.6, zapAt: 4, zapWill: 0.85, fire: 0.97, spikes: 0.5, beatHop: 0.1, lookShots: 0.85 },
-  expert: { react: 8, aware: 0.98, noise: 0.01, hop: 0.95, zapAt: 3, zapWill: 1, fire: 1, spikes: 1, beatHop: 0.5, lookShots: 1 },
+  novice: { react: 26, aware: 0.5, noise: 0.16, hop: 0.15, zapAt: 6, zapWill: 0.5, fire: 0.85, spikes: 0, beatHop: 0, lookShots: 0.5 },
+  average: { react: 18, aware: 0.84, noise: 0.06, hop: 0.6, zapAt: 4, zapWill: 0.85, fire: 0.97, spikes: 0.5, beatHop: 0.1, lookShots: 0.85 },
+  expert: { react: 12, aware: 0.98, noise: 0.01, hop: 0.95, zapAt: 3, zapWill: 1, fire: 1, spikes: 1, beatHop: 0.5, lookShots: 1 },
 };
 
 export class Bot {
@@ -91,17 +91,23 @@ export class Bot {
     }
 
     // What is worth shooting: anything close to the rim first, choirs, bosses' open pieces, spikes before the warp.
+    // A bolt takes a moment to get there, so it aims where the target will be (an expert leads better).
+    const boltStep = ((ship.def.speed * (1 + 0.4 * (ship.mods.staccato || 0))) * w.dt) || 0.02;
+    const shielded = new Set();
+    if (w.boss) for (const p of w.boss.parts) if (!p.dead && p.a === ROLE.SHIELD && p.c > 0) shielded.add(((Math.round(p.lane) % n) + n) % n);
     for (const e of w.enemies) {
       if (e.dead) continue;
-      const lane = hitLane(w, e);
-      if (lane < 0) {
-        // Not hittable right now: still, its lane is where it will be.
-        const l = ((Math.round(e.lane) % n) + n) % n;
-        value[l] += 0.15 * (1.2 - e.z);
-        continue;
-      }
+      const travel = e.z / boltStep;
+      const lead = this.skill === 'expert' ? 1 : this.skill === 'average' ? 0.6 : 0.2;
+      const lane = predictLane(w, e, travel * lead);
+      if (lane < 0) continue;
       if (e.type === E.PART) {
-        if (w.boss && partOpen(w, w.boss, e)) value[lane] += e.a === ROLE.CORE ? 0.6 : 1.4;
+        if (!w.boss || !w.boss.active) continue;
+        if (e.a === ROLE.CORE) {
+          if (!partOpen(w, w.boss, e) && w.boss.kind !== 'conductor') continue;
+          value[lane] += shielded.has(lane) ? 0 : 1.6;
+        } else if (e.a === ROLE.SHIELD) value[lane] += e.c > 0 ? 0.5 : 0;
+        else value[lane] += 2.4;
         continue;
       }
       let v = 1.3 - e.z;
@@ -115,6 +121,14 @@ export class Bot {
     for (let l = 0; l < n; l++) if (w.spikes[l] > 0.05) value[l] += w.spikes[l] * spikeWeight;
     if (warp) for (let l = 0; l < n; l++) danger[l] += w.spikes[l] > 0.02 ? w.spikes[l] * 14 : 0;
 
+    // A ship covers the lanes its bolts go down: a Mallet three, a Fork the two beside it.
+    const cover = ship.def.tines ? [-1, 1] : ship.def.spread ? [-1, 0, 1] : [0];
+    const covered = this.covered || (this.covered = new Float32Array(64));
+    for (let l = 0; l < n; l++) {
+      let v = 0;
+      for (const o of cover) v += value[wrapLane(w, l + o)] * (o === 0 || ship.def.tines ? 1 : 0.7);
+      covered[l] = v;
+    }
     // Choose: the best value, minus danger, minus the trip (and anything deadly on the way).
     let best = here;
     let bestScore = -Infinity;
@@ -126,7 +140,7 @@ export class Bot {
         const pl = wrapLane(w, here + Math.sign(d) * i);
         if (now[pl] >= 9) path += 4;
       }
-      const score = value[l] * 1.0 - danger[l] * 1.3 - dist * 0.06 - path + (l === here ? 0.15 : 0);
+      const score = covered[l] - danger[l] * 1.3 - dist * 0.06 - path + (l === here ? 0.15 : 0);
       if (score > bestScore) (bestScore = score), (best = l);
     }
     if (this.rng.next() < k.noise) best = this.rng.int(n);
@@ -157,6 +171,26 @@ export class Bot {
       if ((near >= k.zapAt || cornered) && this.rng.next() < k.zapWill) ship.in.zap = true;
     }
   }
+}
+
+/** Where an enemy will be after some steps, as a lane index (-1: between lanes). Rough, as a player's eye is. */
+function predictLane(w, e, steps) {
+  const n = w.n;
+  let lane = e.lane;
+  if (e.type === E.WEAVER && e.st === S.CLIMB) {
+    const t = (w.step + steps - e.t0) / (STEPS_PER_BEAT * 2);
+    lane = e.a + e.b * Math.sin(t * Math.PI * 2);
+  } else if (e.fs >= 0) {
+    const p = (w.step + steps - e.fs) / e.fl;
+    lane = p >= 1 ? e.to : e.from + (e.to - e.from) * p;
+  } else if (e.type === E.PART && w.boss && (e.a === ROLE.SEGMENT || e.a === ROLE.SHIELD)) {
+    // The serpent and the ring step a lane on each beat.
+    const toBeat = STEPS_PER_BEAT - (w.step % STEPS_PER_BEAT);
+    if (steps > toBeat) lane = e.lane + w.boss.dir * (1 + Math.floor((steps - toBeat) / STEPS_PER_BEAT));
+  }
+  const r = Math.round(lane);
+  if (Math.abs(lane - r) > 0.3) return -1;
+  return w.web.closed ? ((r % n) + n) % n : r < 0 || r >= n ? -1 : r;
 }
 
 function wrapLane(w, l) {

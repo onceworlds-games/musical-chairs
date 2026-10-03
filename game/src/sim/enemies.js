@@ -19,7 +19,7 @@ export function spawnEnemy(w, type, lane, opts = {}) {
   e.type = type;
   e.lane = wrapU(w.web, lane);
   e.z = opts.z ?? 1;
-  e.hp = opts.hp ?? def.hp * (type === E.TANKER || type === E.BOMBER ? w.hpMul : 1);
+  e.hp = opts.hp ?? (type === E.SHOT || type === E.MINE || type === E.PART ? def.hp : def.hp * w.tough);
   e.maxHp = e.hp;
   e.st = S.CLIMB;
   e.from = e.lane;
@@ -125,7 +125,7 @@ function updateFlip(w, e) {
 /** How fast things climb, in z per step, at this world's pace (and slower near the rim under Undertow). */
 function climbRate(w, e, perBeat) {
   let r = (perBeat * w.pace) / STEPS_PER_BEAT;
-  if (e.z < 0.25 && w.undertow > 0) r *= 1 - Math.min(0.5, 0.25 * w.undertow);
+  if (e.z < 0.25 && w.undertow > 0) r *= w.undertow >= 2 ? 0.75 : 0.85;
   return r;
 }
 

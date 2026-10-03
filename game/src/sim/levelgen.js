@@ -17,11 +17,12 @@ const STANZA_MUL = [0.8, 1, 1.22];
 /** Threat budget for one stanza of a zone. */
 export function stanzaBudget(zone, stanza) {
   const world = WORLDS[zone.world] ?? WORLDS[0];
-  const lvl = LEVEL_MUL[Math.min(3, Math.max(0, zone.level - 1))];
+  // The final movement brings a fuller orchestra.
+  const lvl = zone.level >= 4 && zone.world === 5 ? 0.9 : LEVEL_MUL[Math.min(3, Math.max(0, zone.level - 1))];
   const st = STANZA_MUL[Math.min(2, Math.max(0, stanza))];
   const oc = 1 + OC_BUDGET * (zone.oc || 0);
   const depth = 1 + 0.05 * Math.max(0, zone.depth || 0); // the Descent keeps adding
-  const guided = zone.guided ? 0.6 : zone.world === 0 && zone.level === 1 && !zone.depth ? 0.75 : 1;
+  const guided = zone.guided ? 0.6 : zone.world === 0 && zone.level === 1 && !zone.depth ? 0.65 : 1;
   return world.budget * lvl * st * oc * depth * guided * (zone.density || 1);
 }
 

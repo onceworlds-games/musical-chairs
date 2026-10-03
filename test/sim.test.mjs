@@ -391,8 +391,9 @@ test('run: zones, drafts and the Daily are well-formed and repeatable', () => {
   assert.ok(!draftOptions(run, 'x', 3, {}, false).includes('unison') || true);
   const maxed = Object.fromEntries(MODS.map((m) => [m.key, m.max]));
   assert.deepEqual(draftOptions(run, 'x', 3, maxed, true), []);
-  assert.deepEqual(cleanMods({ pierce: 9, nope: 1, chain: -1, echo: 1.5, spread: 1 }), { pierce: 3, spread: 1 });
-  assert.equal(addMod({ pierce: 3 }, 'pierce').pierce, 3);
+  const pierceMax = MODS.find((m) => m.key === 'pierce').max;
+  assert.deepEqual(cleanMods({ pierce: 9, nope: 1, chain: -1, echo: 1.5, spread: 1 }), { pierce: pierceMax, spread: 1 });
+  assert.equal(addMod({ pierce: pierceMax }, 'pierce').pierce, pierceMax);
   const day = dailyFor(20000);
   assert.deepEqual(day, dailyFor(20000));
   assert.equal(day.mods.length, 2);
