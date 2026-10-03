@@ -66,13 +66,13 @@ export const shipMethods = {
     const from = laneOf(this.web, ship.u);
     const gn = mod(ship, 'gracenote');
     // Encore's price: a hop every two beats.
-    ship.hopCd = this.step + (gn >= 2 ? (STEPS_PER_BEAT * 3) / 4 : STEPS_PER_BEAT) * (mod(ship, 'encore') ? 2 : 1);
+    ship.hopCd = this.step + (gn >= 2 ? STEPS_PER_BEAT * 0.82 : STEPS_PER_BEAT) * (mod(ship, 'encore') ? 2 : 1);
     let to = from + ship.dir * SHIP.hopLanes;
     if (!this.web.closed) to = Math.max(0, Math.min(this.n - 1, to));
     ship.u = wrapU(this.web, to);
     ship.pu = ship.u;
     ship.in.target = Math.round(ship.u); // the blink lands where it lands: the ship does not slide back to the old lane
-    ship.inv = Math.max(ship.inv, this.step + Math.round((SHIP.hopInvuln + 0.06 * gn) / this.dt));
+    ship.inv = Math.max(ship.inv, this.step + Math.round((SHIP.hopInvuln + 0.04 * gn) / this.dt));
     ship.contact = 0;
     ship.charge = 0;
     const phase = (((this.step - ship.lat) % STEPS_PER_BEAT) + STEPS_PER_BEAT) % STEPS_PER_BEAT;
@@ -206,7 +206,7 @@ export const shipMethods = {
     }
     if (mod(ship, 'counterpoint')) this.spawnBolt(ship, opposite(this.web, lane), { ...opts, dmg: dmg * 0.3, pierce: 0, kind: 3 });
     const echo = mod(ship, 'echo');
-    if (echo && ship.echoes.length < 16) ship.echoes.push([this.step + STEPS_PER_BEAT, lane, dmg * (echo >= 2 ? 0.45 : 0.3)]);
+    if (echo && ship.echoes.length < 16) ship.echoes.push([this.step + STEPS_PER_BEAT, lane, dmg * (echo >= 2 ? 0.38 : 0.26)]);
     this.event('fire', ship.idx, lane, 0, onBeat ? 1 : offBeat ? 2 : 0, pressed ? 1 : 0);
   },
 

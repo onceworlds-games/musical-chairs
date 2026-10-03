@@ -654,32 +654,40 @@ export class Menus {
     y += big + 14;
     const cause = DEATH_NAMES[r.cause];
     if (!r.cleared && (cause || r.ended)) vec.text(`${r.ended ? 'ENDED' : CAUSE[cause] || cause} · ${r.zone}`, cx, y, Math.max(11, Math.min(13, R * 0.06)), WHITE, 0.5, 0.9);
-    const mine = run.players[s.room.me.id];
-    if (mine) vec.text(`KILLS ${mine.kills}   CHORDS ${mine.chords}   BOSSES ${run.stats.bosses}`, cx, cy + Ry * 0.66, Math.max(10.5, Math.min(12, R * 0.05)), hue, 0.5, 0.85);
     const ssz = Math.min(R * 0.17, 40);
-    y = cy - ssz / 2;
+    y = Math.max(y + 8, cy - ssz / 2 - Ry * 0.08);
     vec.text(String(run.score), cx, y, ssz, WHITE, 0.5, 1, 1.1);
     y += ssz + 12;
     const best = run.mode === 'descent' ? app.profile.bestDescent : app.profile.best;
     if (app.newBest) vec.text('NEW BEST', cx, y, Math.max(12, Math.min(14, R * 0.07)), hue, 0.5, app.calm ? 0.95 : 0.7 + 0.3 * Math.abs(Math.sin(t * 2.5)));
     else if (best) vec.text(`BEST ${best}`, cx, y, Math.max(11, Math.min(12, R * 0.06)), hue, 0.5, 0.8);
-    y += 30;
-    y = this.moments(vec, run, cx, y, 11, hue);
+    y += 26;
+    // The rest flows downward and stops above the platform's strip: the biggest payouts, the tally, the crew, the unlocks.
+    const room = () => H - 100 - y;
+    y = this.moments(vec, { top: (run.top || []).slice(0, Math.max(0, Math.min(3, Math.floor(room() / 20) - 1))) }, cx, y, 11, hue, 19);
+    const mine = run.players[s.room.me.id];
+    if (mine && room() >= 20) {
+      vec.text(`KILLS ${mine.kills}   CHORDS ${mine.chords}   BOSSES ${run.stats.bosses}`, cx, y, Math.max(10.5, Math.min(12, R * 0.05)), hue, 0.5, 0.85);
+      y += 24;
+    }
     const list = Object.entries(run.players)
       .map(([id, p]) => ({ id, ...p }))
       .sort((p, q) => q.score - p.score)
       .slice(0, 4);
     const rowW = Math.min(360, R * 1.5);
-    for (const p of list.length > 1 ? list : []) {
-      const x = cx - rowW / 2;
-      vec.begin();
-      shipIcon(vec, p.ship, x + 10, y + 7, 8);
-      vec.glow(p.id === s.room.me.id ? WHITE : hue, 1, 0.8);
-      app.nameText(p.n || 'PLAYER', x + 26, y, rowW * 0.55, false);
-      vec.text(`${p.score}`, x + rowW, y + 1, 11, WHITE, 1, 0.9);
-      y += 24;
+    if (list.length > 1) {
+      for (const p of list.slice(0, Math.max(0, Math.min(4, Math.floor(room() / 24))))) {
+        const x = cx - rowW / 2;
+        vec.begin();
+        shipIcon(vec, p.ship, x + 10, y + 7, 8);
+        vec.glow(p.id === s.room.me.id ? WHITE : hue, 1, 0.8);
+        app.nameText(p.n || 'PLAYER', x + 26, y, rowW * 0.55, false);
+        vec.text(`${p.score}`, x + rowW, y + 1, 11, WHITE, 1, 0.9);
+        y += 24;
+      }
     }
     for (const u of (app.unlocked || []).slice(0, 3)) {
+      if (room() < 18) break;
       vec.text(`NEW ${u}`, cx, y, 12, WHITE, 0.5, 0.95);
       y += 20;
     }

@@ -80,7 +80,7 @@ export const RESONANCE_MAX = 100;
 export const OVERDRIVE_SECONDS = 10;
 export const MULT_CAP = 8;
 export const PIERCE_KEEP = 0.55; // a bolt that passes through something keeps this much of its bite (beams keep all of it)
-export const SHIELD_BARS = [16, 12]; // Shield Beat: a shield as play begins, then every this many bars (with one, with two)
+export const SHIELD_BARS = [24, 16]; // Shield Beat: a shield as play begins, then every this many bars (with one, with two)
 
 /** The most ships a team can hold: six for one pilot, one more for each friend. */
 const CREW_MAX = [6, 8, 8, 8];
