@@ -105,7 +105,7 @@ if (on('mods')) {
   }
   deltas.sort((a, b) => b[1] - a[1]);
   console.log('  strongest:', deltas.slice(0, 5).map(([k, d]) => `${k} ${(100 * d).toFixed(0)}`).join(', '));
-  const top = onlyMods.length ? onlyMods : deltas.slice(0, 5).map(([k]) => k);
+  const top = deltas.slice(0, 5).map(([k]) => k);
   row('PAIRS (strongest singles)', 'without', 'with both', 'delta');
   for (let i = 0; i < top.length; i++) {
     for (let j = i + 1; j < top.length; j++) {

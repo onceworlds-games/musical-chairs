@@ -472,6 +472,13 @@ export class View {
         const d = e.lane - e.px;
         if (Math.abs(d) < 2) u = e.px + d * a;
         this.frame(u, z, f);
+        if (z < 0.04) {
+          // On the rim they sit a little smaller, so neighbours never merge into one shape.
+          f.ax *= 0.8;
+          f.ay *= 0.8;
+          f.dx *= 0.8;
+          f.dy *= 0.8;
+        }
         this.enemyShape(e, f, t, scene, z);
         any = true;
       }

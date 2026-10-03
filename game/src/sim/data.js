@@ -172,7 +172,7 @@ export const WORLDS = [
     bossShape: 'flat',
     boss: 'mirror',
     pace: 1.55,
-    tough: 2.25, // hit points of a plain enemy here
+    tough: 2, // hit points of a plain enemy here
     budget: 124,
     pool: { [E.FLIPPER]: 8, [E.TANKER]: 2, [E.SPIKER]: 2, [E.FUSEBALL]: 3, [E.WEAVER]: 3, [E.PULSAR]: 2, [E.GHOST]: 2, [E.BOMBER]: 2, [E.SIREN]: 3 },
     cargo: E.FLIPPER,
@@ -190,7 +190,7 @@ export const WORLDS = [
     bossShape: 'circle',
     boss: 'maestro',
     pace: 1.7,
-    tough: 2.5, // hit points of a plain enemy here
+    tough: 2, // hit points of a plain enemy here
     budget: 144,
     pool: { [E.FLIPPER]: 8, [E.TANKER]: 3, [E.SPIKER]: 2, [E.FUSEBALL]: 3, [E.WEAVER]: 2, [E.PULSAR]: 3, [E.GHOST]: 2, [E.BOMBER]: 2, [E.SIREN]: 3 },
     cargo: E.PULSAR,
@@ -210,7 +210,7 @@ export const WORLDS = [
     bossShape: 'octagon',
     boss: 'gate',
     pace: 1.45,
-    tough: 2.25, // hit points of a plain enemy here
+    tough: 2, // hit points of a plain enemy here
     budget: 110,
     pool: { [E.FLIPPER]: 8, [E.TANKER]: 3, [E.SPIKER]: 3, [E.FUSEBALL]: 3, [E.WEAVER]: 3, [E.PULSAR]: 2, [E.GHOST]: 2, [E.BOMBER]: 2, [E.SIREN]: 2 },
     cargo: E.FUSEBALL,
@@ -228,7 +228,7 @@ export const WORLDS = [
     bossShape: 'star',
     boss: 'conductor',
     pace: 1.5,
-    tough: 2.25, // hit points of a plain enemy here
+    tough: 2, // hit points of a plain enemy here
     budget: 116,
     pool: { [E.FLIPPER]: 8, [E.TANKER]: 3, [E.SPIKER]: 2, [E.FUSEBALL]: 3, [E.WEAVER]: 3, [E.PULSAR]: 3, [E.GHOST]: 3, [E.BOMBER]: 2, [E.SIREN]: 2 },
     cargo: E.PULSAR,
