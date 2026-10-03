@@ -144,10 +144,19 @@ class App {
     this.layoutView();
   }
 
+  /** A phone held sideways: the screen is wider than it is tall and has under 520 px of height. */
+  get short() {
+    return this.H < 520 && this.W > this.H;
+  }
+
   layoutView() {
     const touch = platform.touch || this.input.usedTouch;
-    // The lobby keeps the players' row above the tunnel and the platform's Ready strip below it.
-    if (this.screen === 'lobby') this.view.layout(this.W, this.H, 112, 112);
+    const short = this.short;
+    if (this.screen === 'title' || this.screen === 'connecting' || this.screen === 'closed' || this.screen === 'wait') this.view.layout(this.W, this.H, 16, 16);
+    // The lobby keeps the players' row above the tunnel and the platform's Ready strip below it (on a short screen the
+    // tunnel is a backdrop and the words go in a column over it).
+    else if (this.screen === 'lobby') short ? this.view.layout(this.W, this.H, 20, 20) : this.view.layout(this.W, this.H, 112, 112);
+    else if (short) this.view.layout(this.W, this.H, 34, 52);
     else this.view.layout(this.W, this.H, this.W < 520 ? 92 : 64, touch ? 96 : 52);
   }
 
@@ -236,7 +245,7 @@ class App {
       buttons = this.drawMenu();
     }
     this.buttons.set(buttons);
-    this.buttons.draw(vec, this.hue(), this.t, this.calm);
+    this.buttons.draw(vec, this.hue(), this.t, this.calm, platform.touch || this.input.usedTouch);
     if (this.play.flash > 0) {
       // A zap: one soft wash, never a strobe.
       const c = vec.ctx;
@@ -393,6 +402,7 @@ class App {
       touch: platform.touch || this.input.usedTouch,
       watching: this.screen === 'watch',
       practice: this.play.zone?.practice,
+      short: this.short,
     });
   }
 
@@ -423,8 +433,8 @@ class App {
     const clean = String(name || '').slice(0, 24);
     const room = host ? 16 : 0;
     let w;
-    if (strokeable(clean) && this.vec.measure(clean, 10) <= maxW - room) {
-      w = this.vec.text(clean, x, y + 1, 10, WHITE, 0, 0.85);
+    if (strokeable(clean) && this.vec.measure(clean, 11) <= maxW - room) {
+      w = this.vec.text(clean, x, y + 1, 11, WHITE, 0, 0.9);
     } else {
       const c = this.vec.ctx;
       c.globalCompositeOperation = 'source-over';
@@ -575,12 +585,16 @@ class App {
       const v = this.view;
       const c = this.vec.ctx;
       c.globalCompositeOperation = 'source-over';
-      const g = c.createRadialGradient(v.cx, v.cy, 0, v.cx, v.cy, v.S * 0.7);
+      c.save();
+      c.translate(v.vx(), v.vy());
+      c.scale(v.Sx / v.S, v.Sy / v.S);
+      const g = c.createRadialGradient(0, 0, 0, 0, 0, v.S * 0.7);
       g.addColorStop(0, 'rgba(2,4,3,0.82)');
       g.addColorStop(0.75, 'rgba(2,4,3,0.55)');
       g.addColorStop(1, 'rgba(2,4,3,0)');
       c.fillStyle = g;
-      c.fillRect(v.cx - v.S, v.cy - v.S, v.S * 2, v.S * 2);
+      c.fillRect(-v.S, -v.S, v.S * 2, v.S * 2);
+      c.restore();
       c.globalCompositeOperation = 'lighter';
     }
   }

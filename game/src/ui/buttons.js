@@ -72,10 +72,20 @@ export class Buttons {
   }
 
   /** Draws the declared buttons. */
-  draw(vec, hue, t, calm) {
+  draw(vec, hue, t, calm, touch = false) {
+    const now = performance.now();
     for (const b of this.list) {
       if (b.hidden) continue;
       const lit = b.id === this.hover || b.id === this.focus;
+      // A press answers at once: a short wash of light inside the box.
+      const age = now - (this.pressedAt.get(b.id) || -1e9);
+      if (age < 200 && !b.off) {
+        const c = vec.ctx;
+        c.fillStyle = b.on ? '#ffffff' : hue;
+        c.globalAlpha = 0.22 * (1 - age / 200);
+        c.fillRect(b.x, b.y, b.w, b.h);
+        c.globalAlpha = 1;
+      }
       const k = b.off ? 0.3 : b.on ? 1 : lit ? 0.95 : 0.6;
       const col = b.on || lit ? '#ffffff' : b.color || hue;
       if (b.frame !== false) {
@@ -111,8 +121,8 @@ export class Buttons {
         const size = Math.min(b.small ? 12 : b.big ? 26 : 17, (b.h - 18) * 0.9, (b.w - 16) / Math.max(1, b.label.length * 0.95));
         vec.text(b.label, b.x + b.w / 2, b.y + b.h / 2 - size / 2, Math.max(8, size), col, 0.5, Math.min(1, k + 0.15));
       }
-      if (b.key && !b.small) {
-        vec.text(b.key, b.x + b.w - 6, b.y + 5, 7, col, 1, 0.45);
+      if (b.key && !b.small && !touch) {
+        vec.text(b.key, b.x + b.w - 6, b.y + 5, 8, col, 1, 0.6);
       }
     }
   }

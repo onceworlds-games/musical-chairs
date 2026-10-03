@@ -10,7 +10,8 @@
     "balance": "node scripts/balance.mjs",
     "store": "node scripts/store.mjs",
     "smoke": "node scripts/smoke.mjs",
-    "audio": "node scripts/audio.mjs"
+    "audio": "node scripts/audio.mjs",
+    "comfort": "node scripts/comfort.mjs"
   },
   "license": "MIT"
 }

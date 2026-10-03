@@ -54,9 +54,7 @@ export class Menus {
   /** The tunnel's centre, its rim radius and a point at (lane, depth). */
   geo() {
     const v = this.app.view;
-    const cx = v.cx + v.vp[0] * v.S;
-    const cy = v.cy + v.vp[1] * v.S;
-    return { v, cx, cy, R: v.S, web: v.web };
+    return { v, cx: v.vx(), cy: v.vy(), R: v.S, Ry: v.Sy, web: v.web };
   }
 
   // ---------------------------------------------------------------- title
@@ -65,12 +63,24 @@ export class Menus {
     const app = this.app;
     const size = Math.min(W / 8.5, H / 7, 92);
     const y = H * 0.3;
+    // A pool of dark behind the words, so the lanes running through them never cut a letter.
+    const c = vec.ctx;
+    c.globalCompositeOperation = 'source-over';
+    for (const [gy, gr, ga] of [[y, Math.max(size * 4.2, W * 0.34), 0.62], [H * 0.66, Math.max(150, W * 0.24), 0.55]]) {
+      const g = c.createRadialGradient(W / 2, gy, 0, W / 2, gy, gr);
+      g.addColorStop(0, `rgba(2,4,3,${ga})`);
+      g.addColorStop(0.6, `rgba(2,4,3,${ga * 0.6})`);
+      g.addColorStop(1, 'rgba(2,4,3,0)');
+      c.fillStyle = g;
+      c.fillRect(W / 2 - gr, gy - gr, gr * 2, gr * 2);
+    }
+    c.globalCompositeOperation = 'lighter';
     // The logo: an outline in the world's colour with a thin white-hot line inside it, like a tube drawn twice.
     vec.text('RIMSHOT', W / 2, y - size / 2, size, hue, 0.5, 0.95, 0.75);
     vec.text('RIMSHOT', W / 2 + 1.5, y - size / 2 + 1.5, size, WHITE, 0.5, 0.35 + (app.calm ? 0 : 0.12 * Math.sin(t * 2.4)), 0.22);
-    if (app.profile.best > 0) vec.text(`BEST ${app.profile.best}`, W / 2, y + size * 0.72, Math.max(10, size * 0.15), hue, 0.5, 0.75);
-    const bw = Math.min(260, W * 0.6);
-    return [{ id: 'play', x: W / 2 - bw / 2, y: H * 0.64, w: bw, h: 66, label: 'PLAY', key: 'ENTER', big: true }];
+    if (app.profile.best > 0) vec.text(`BEST ${app.profile.best}`, W / 2, y + size * 0.72, Math.max(11, size * 0.15), hue, 0.5, 0.8);
+    const bw = Math.min(300, W * 0.7);
+    return [{ id: 'play', x: W / 2 - bw / 2, y: H * 0.64, w: bw, h: 84, label: 'PLAY', key: 'ENTER', big: true }];
   }
 
   // ---------------------------------------------------------------- hub: ships on the rim, the mode at the far end
@@ -83,9 +93,10 @@ export class Menus {
     const hub = s.hub;
     const buttons = [];
     if (this.look) return this.lookPanel(vec, W, H, t, hue);
+    if (app.short) return this.hubShort(vec, W, H, t, hue);
     this.playersRow(vec, 12, 62, W - 24, hue, buttons, true);
     this.corner(buttons, W);
-    const { v, cx, cy, R, web } = this.geo();
+    const { v, cx, cy, R, Ry, web } = this.geo();
     if (!web) return buttons;
     const daily = hub.mode === 'daily' ? dailyFor(dayOf(app.now())) : null;
     // The six ships along the bottom of the rim.
@@ -122,48 +133,234 @@ export class Menus {
       buttons.push({ id: `ship:${i}`, x: f.cx - r, y: f.cy - r, w: r * 2, h: r * 2, frame: false, on, off: Boolean(daily), aria: open ? SHIPS[i].name : `${SHIPS[i].name}, locked: ${unlockLabel(i)}` });
     });
     // The chosen ship's name over the arc (or what a locked one asks for).
-    const nameY = cy + R * 0.42;
-    const nsz = Math.min(R * 0.11, 22);
+    const nameY = cy + Ry * 0.4;
+    const nsz = Math.max(14, Math.min(R * 0.11, 22));
+    const tsz = Math.max(10.5, nsz * 0.55);
     if (this.flash && performance.now() - this.flash.at < 1800) {
       vec.text(SHIPS[this.flash.i].name, cx, nameY, nsz, hue, 0.5, 0.6);
-      vec.text(unlockLabel(this.flash.i), cx, nameY + nsz + 8, nsz * 0.55, WHITE, 0.5, 0.9);
+      vec.text(unlockLabel(this.flash.i), cx, nameY + nsz + 8, tsz, WHITE, 0.5, 0.95);
     } else {
       vec.text(SHIPS[chosen].name, cx, nameY, nsz, WHITE, 0.5, 1);
-      vec.text(SHIPS[chosen].tag, cx, nameY + nsz + 8, nsz * 0.5, hue, 0.5, 0.75);
+      vec.text(SHIPS[chosen].tag, cx, nameY + nsz + 8, tsz, hue, 0.5, 0.85);
     }
     // The mode at the far end of the tunnel.
-    const msz = Math.min(R * 0.17, 38);
-    const my = cy - R * 0.36;
+    const msz = Math.max(24, Math.min(R * 0.17, 38));
+    const my = cy - Ry * 0.38;
     vec.text(MODE_NAMES[hub.mode], cx, my, msz, WHITE, 0.5, 1, 1.1);
     if (host) this.arrows(buttons, 'mode', cx, my + msz / 2, Math.max(vec.measure(MODE_NAMES[hub.mode], msz) / 2 + 30, R * 0.42), true, true);
     // What the mode plays with: Overclock, or the practice zone, or today's best.
-    let ry = cy - R * 0.08;
-    const rsz = Math.min(R * 0.085, 17);
+    const rsz = Math.max(13, Math.min(R * 0.085, 17));
+    this.modeRows(vec, buttons, cx, cy - Ry * 0.1, rsz, R * 0.3, hue);
+    if (hub.mode === 'run' || hub.mode === 'descent') this.dial(vec, cx, cy, R, Ry, Math.min(8, hub.oc), hue);
+    if (!app.platformPresent) buttons.push({ id: 'start', x: W / 2 - 110, y: H - 80, w: 220, h: 56, label: 'START', key: 'ENTER' });
+    return buttons;
+  }
+
+  /** What the mode plays with: Overclock, the practice zone, or today's best. Returns the y below the last row. */
+  modeRows(vec, buttons, cx, y, rsz, minHalf, hue, gap = 8) {
+    const app = this.app;
+    const s = app.session;
+    const prof = app.profile;
+    const host = s.isHost;
+    const hub = s.hub;
     const row = (id, label, sub, canDown, canUp) => {
-      vec.text(label, cx, ry, rsz, hue, 0.5, 0.95);
-      if (sub) vec.text(sub, cx, ry + rsz + 6, rsz * 0.55, WHITE, 0.5, 0.6);
-      if (host) this.arrows(buttons, id, cx, ry + rsz / 2, Math.max(vec.measure(label, rsz) / 2 + 26, R * 0.3), canDown, canUp);
-      ry += rsz + (sub ? 26 : 16) + 8;
+      vec.text(label, cx, y, rsz, hue, 0.5, 0.95);
+      if (sub) vec.text(sub, cx, y + rsz + 6, Math.max(10, rsz * 0.6), WHITE, 0.5, 0.75);
+      if (host) this.arrows(buttons, id, cx, y + rsz / 2, Math.max(vec.measure(label, rsz) / 2 + 26, minHalf), canDown, canUp);
+      y += rsz + (sub ? 30 : 16) + gap;
     };
     if (hub.mode === 'run' || hub.mode === 'descent') {
       const max = host ? ocAllowed(prof) : 8;
       const oc = Math.min(8, hub.oc);
       row('oc', oc ? `OVERCLOCK ${oc}` : 'OVERCLOCK OFF', oc ? OVERCLOCK[oc].rule : '', oc > 0, oc < max);
-      this.dial(vec, cx, cy, R, oc, hue);
     } else if (hub.mode === 'practice') {
       row('pw', WORLDS[hub.pw].name, '', hub.pw > 0, hub.pw < (prof.deepest >= 8 ? 7 : 5));
       row('pl', hub.pl >= 4 ? 'BOSS' : `ZONE ${hub.pl}`, '', hub.pl > 1, hub.pl < LEVELS_PER_WORLD);
       row('pt', `${Math.round(TEMPOS[hub.pt] * 100)}%`, '', hub.pt > 0, hub.pt < TEMPOS.length - 1);
     } else if (hub.mode === 'daily') {
       const best = prof.daily.day === dayOf(app.now()) ? prof.daily.best : 0;
-      if (best) vec.text(`TODAY ${best}`, cx, ry, rsz, hue, 0.5, 0.9);
+      if (best) vec.text(`TODAY ${best}`, cx, y, rsz, hue, 0.5, 0.9);
     }
-    if (!app.platformPresent) buttons.push({ id: 'start', x: W / 2 - 110, y: H - 80, w: 220, h: 56, label: 'START', key: 'ENTER' });
+    return y;
+  }
+
+  /** The hub on a short screen (a phone held sideways): one column over the dimmed tunnel, the ships in a row. */
+  hubShort(vec, W, H, t, hue) {
+    const app = this.app;
+    const s = app.session;
+    const prof = app.profile;
+    const host = s.isHost;
+    const hub = s.hub;
+    const buttons = [];
+    this.playersRow(vec, 12, 46, W - 190, hue, buttons, true);
+    this.corner(buttons, W);
+    const cx = W / 2;
+    const daily = hub.mode === 'daily' ? dailyFor(dayOf(app.now())) : null;
+    const chosen = daily ? daily.ship : s.myShip;
+    let y = 92;
+    const msz = 26;
+    vec.text(MODE_NAMES[hub.mode], cx, y, msz, WHITE, 0.5, 1, 1.1);
+    if (host) this.arrows(buttons, 'mode', cx, y + msz / 2, Math.max(vec.measure(MODE_NAMES[hub.mode], msz) / 2 + 34, 90), true, true);
+    y += msz + 16;
+    y = this.modeRows(vec, buttons, cx, y, 15, 90, hue, 2);
+    // The six ships in a row, the chosen one lit.
+    const sy = Math.max(y + 6, 178);
+    const size = 46;
+    this.shipRow(vec, buttons, cx, sy, chosen, hue, Boolean(daily));
+    const ny = sy + size + 14;
+    if (this.flash && performance.now() - this.flash.at < 1800) {
+      vec.text(`${SHIPS[this.flash.i].name}  ${unlockLabel(this.flash.i)}`, cx, ny, 13, WHITE, 0.5, 0.95);
+    } else {
+      vec.text(`${SHIPS[chosen].name}  ${SHIPS[chosen].tag}`, cx, ny, 13, WHITE, 0.5, 1);
+    }
+    if (!app.platformPresent) buttons.push({ id: 'start', x: W / 2 - 110, y: H - 70, w: 220, h: 50, label: 'START', key: 'ENTER' });
+    void host;
+    return buttons;
+  }
+
+  /** The six ships in a row (a short screen's picker): the chosen one lit, the locked ones dim. */
+  shipRow(vec, buttons, cx, sy, chosen, hue, off = false) {
+    const prof = this.app.profile;
+    const size = 46;
+    const gap = 8;
+    const total = RIM_ORDER.length * size + (RIM_ORDER.length - 1) * gap;
+    let x = cx - total / 2;
+    RIM_ORDER.forEach((i) => {
+      const open = shipUnlocked(prof, i);
+      const on = chosen === i;
+      vec.begin();
+      shipIcon(vec, i, x + size / 2, sy + size / 2 + 5, 17);
+      vec.glow(on ? WHITE : hue, on ? 1.8 : 1.3, open ? (on ? 1.15 : 0.8) : 0.2);
+      if (on) {
+        vec.begin();
+        vec.move(x + 6, sy + size + 2);
+        vec.to(x + size - 6, sy + size + 2);
+        vec.glow(WHITE, 1.4, 0.9);
+      }
+      buttons.push({ id: `ship:${i}`, x, y: sy, w: size, h: size, frame: false, on, off, aria: open ? SHIPS[i].name : `${SHIPS[i].name}, locked: ${unlockLabel(i)}` });
+      x += size + gap;
+    });
+  }
+
+  /** The draft on a short screen: three cards side by side under a one-line header. */
+  draftShort(vec, W, H, t, hue) {
+    const app = this.app;
+    const s = app.session;
+    const run = s.run;
+    const buttons = [];
+    this.playersRow(vec, 12, 46, W - 190, hue, buttons, true);
+    this.corner(buttons, W);
+    const cx = W / 2;
+    const me = s.room.me.id;
+    const mine = run.players[me];
+    const done = zoneFor(run, run.idx - 1);
+    const next = zoneFor(run, run.idx);
+    vec.text(`${zoneLabel(done)} CLEAR`, cx, 90, 20, WHITE, 0.5, 1, 1.1);
+    vec.text(`${next.level >= 4 ? 'NEXT: BOSS' : `NEXT: ${zoneLabel(next)}`}    ${run.score}`, cx, 118, 12, hue, 0.5, 0.95);
+    vec.begin();
+    for (let i = 0; i < Math.min(8, run.lives); i++) {
+      const x = cx - ((Math.min(8, run.lives) - 1) * 14) / 2 + i * 14;
+      vec.move(x - 5, 142);
+      vec.to(x + 5, 142);
+      vec.to(x, 150);
+      vec.to(x - 5, 142);
+    }
+    vec.glow(WHITE, 1, 0.85);
+    if (!mine) {
+      vec.text('PICK A SHIP', cx, 170, 14, WHITE, 0.5, 0.95);
+      this.shipRow(vec, buttons, cx, 196, s.myShip, hue);
+      return buttons;
+    }
+    const key = `${run.rid}.${run.idx}`;
+    const options = draftOptions(run, me, run.idx - 1, mine.mods, run.roster.length > 1);
+    const picked = s.pickedKey === key ? s.pickedMod : null;
+    if (this.focus >= options.length) this.focus = Math.max(0, options.length - 1);
+    const gap = 10;
+    const cw = Math.min(250, (W - 28 - gap * (options.length - 1)) / Math.max(1, options.length));
+    const total = options.length * cw + (options.length - 1) * gap;
+    let x = cx - total / 2;
+    const y = 166;
+    options.forEach((k, i) => {
+      const def = MODS.find((m) => m.key === k);
+      const on = picked === k;
+      const lit = on || (!picked && this.focus === i);
+      const have = mine.mods[k] || 0;
+      const name = have ? `${def.name} ${'I'.repeat(have + 1)}` : def.name;
+      const dim = picked && !on;
+      buttons.push({
+        id: `mod:${k}`,
+        x,
+        y,
+        w: cw,
+        h: 120,
+        on: lit,
+        aria: `${def.name}: ${def.tag}`,
+        draw: (vc, b, hover) => {
+          vc.begin();
+          iconPath(vc, MOD_ICONS[k] || [], b.x + b.w / 2 - 17, b.y + 12, 34);
+          vc.glow(on || hover ? WHITE : hue, 1.8, dim ? 0.35 : 1);
+          vc.text(name, b.x + b.w / 2, b.y + 54, 13, on || hover ? WHITE : hue, 0.5, dim ? 0.4 : 1);
+          vc.lines(def.tag, 10.5, b.w - 16)
+            .slice(0, 2)
+            .forEach((ln, li) => vc.text(ln, b.x + b.w / 2, b.y + 78 + li * 14, 10.5, WHITE, 0.5, dim ? 0.3 : 0.85));
+        },
+      });
+      x += cw + gap;
+    });
+    if (!app.platformPresent) buttons.push({ id: 'start', x: W / 2 - 110, y: H - 70, w: 220, h: 50, label: 'GO', key: 'ENTER' });
+    return buttons;
+  }
+
+  /** The results on a short screen: one column. */
+  resultsShort(vec, W, H, t, hue) {
+    const app = this.app;
+    const s = app.session;
+    const run = s.run;
+    const buttons = [];
+    const cx = W / 2;
+    const r = run.result || { cleared: false, cause: 0, zone: '', depth: run.idx };
+    let title = r.cleared ? 'RUN CLEAR' : 'GAME OVER';
+    if (run.mode === 'descent') title = `DEPTH ${r.depth}`;
+    if (run.mode === 'practice') title = r.cleared ? 'ZONE CLEAR' : 'PRACTICE';
+    vec.text(title, cx, 60, 30, r.cleared ? WHITE : hue, 0.5, 1, 1.2);
+    const cause = DEATH_NAMES[r.cause];
+    if (!r.cleared && (cause || r.ended)) vec.text(`${r.ended ? 'ENDED' : CAUSE[cause] || cause} · ${r.zone}`, cx, 102, 12, WHITE, 0.5, 0.9);
+    vec.text(String(run.score), cx, 128, 36, WHITE, 0.5, 1, 1.1);
+    const best = run.mode === 'descent' ? app.profile.bestDescent : app.profile.best;
+    let y = 176;
+    if (app.newBest) vec.text('NEW BEST', cx, y, 13, hue, 0.5, app.calm ? 0.95 : 0.7 + 0.3 * Math.abs(Math.sin(t * 2.5)));
+    else if (best) vec.text(`BEST ${best}`, cx, y, 12, hue, 0.5, 0.8);
+    y += 24;
+    const mine = run.players[s.room.me.id];
+    if (mine) vec.text(`KILLS ${mine.kills}   CHORDS ${mine.chords}   BOSSES ${run.stats.bosses}`, cx, y, 11, hue, 0.5, 0.85);
+    y += 24;
+    const list = Object.entries(run.players)
+      .map(([id, p]) => ({ id, ...p }))
+      .sort((p, q) => q.score - p.score)
+      .slice(0, 4);
+    if (list.length > 1) {
+      const rowW = 300;
+      for (const p of list.slice(0, 2)) {
+        const x = cx - rowW / 2;
+        vec.begin();
+        shipIcon(vec, p.ship, x + 10, y + 7, 8);
+        vec.glow(p.id === s.room.me.id ? WHITE : hue, 1, 0.8);
+        app.nameText(p.n || 'PLAYER', x + 26, y, rowW * 0.55, false);
+        vec.text(`${p.score}`, x + rowW, y + 1, 11, WHITE, 1, 0.9);
+        y += 22;
+      }
+    }
+    for (const u of (app.unlocked || []).slice(0, 2)) {
+      vec.text(`NEW ${u}`, cx, y, 12, WHITE, 0.5, 0.95);
+      y += 18;
+    }
+    if (s.isHost) buttons.push({ id: 'tohub', x: W - 12 - 96, y: 8, w: 96, h: 44, label: 'SHIPS', small: true });
+    if (!app.platformPresent) buttons.push({ id: 'start', x: W / 2 - 110, y: H - 70, w: 220, h: 50, label: 'AGAIN', key: 'ENTER' });
     return buttons;
   }
 
   /** Overclock as eight ticks round the far ring. */
-  dial(vec, cx, cy, R, oc, hue) {
+  dial(vec, cx, cy, R, Ry, oc, hue) {
     if (!oc) return;
     const r = R * 0.27;
     vec.begin();
@@ -171,8 +368,8 @@ export class Menus {
       const a = -Math.PI / 2 + ((i - 3.5) * Math.PI) / 14;
       const a2 = a + Math.PI / 20;
       if (i >= oc) continue;
-      vec.move(cx + Math.cos(a) * r, cy - R * 0.02 + Math.sin(a) * r);
-      vec.to(cx + Math.cos(a2) * r, cy - R * 0.02 + Math.sin(a2) * r);
+      vec.move(cx + Math.cos(a) * r, cy - Ry * 0.02 + Math.sin(a) * r);
+      vec.to(cx + Math.cos(a2) * r, cy - Ry * 0.02 + Math.sin(a2) * r);
     }
     vec.glow(oc >= 6 ? WHITE : hue, 2.2, 0.9);
   }
@@ -267,23 +464,27 @@ export class Menus {
     const run = s.run;
     const buttons = [];
     if (!run) return buttons;
+    if (app.short) return this.draftShort(vec, W, H, t, hue);
     this.playersRow(vec, 12, 62, W - 24, hue, buttons, true);
     this.corner(buttons, W);
-    const { v, cx, cy, R, web } = this.geo();
+    const { v, cx, cy, R, Ry, web } = this.geo();
     if (!web) return buttons;
     const me = s.room.me.id;
     const mine = run.players[me];
     const done = zoneFor(run, run.idx - 1);
     const next = zoneFor(run, run.idx);
-    const tsz = Math.min(R * 0.14, 32);
-    vec.text(`${zoneLabel(done)} CLEAR`, cx, cy - R * 0.6, tsz, WHITE, 0.5, 1, 1.1);
-    vec.text(next.level >= 4 ? 'NEXT: BOSS' : `NEXT: ${zoneLabel(next)}`, cx, cy - R * 0.6 + tsz + 12, Math.min(R * 0.065, 14), hue, 0.5, 0.9);
-    vec.text(`${run.score}`, cx, cy - R * 0.22, Math.min(R * 0.085, 18), WHITE, 0.5, 0.85);
+    const compact = W < 600;
+    const tsz = Math.max(20, Math.min(R * 0.14, 32));
+    const top = cy - Ry * (compact ? 0.78 : 0.6);
+    vec.text(`${zoneLabel(done)} CLEAR`, cx, top, tsz, WHITE, 0.5, 1, 1.1);
+    vec.text(next.level >= 4 ? 'NEXT: BOSS' : `NEXT: ${zoneLabel(next)}`, cx, top + tsz + 12, Math.max(12, Math.min(R * 0.065, 14)), hue, 0.5, 0.95);
+    const sy = top + tsz + 40;
+    vec.text(`${run.score}`, cx, sy, Math.max(14, Math.min(R * 0.085, 18)), WHITE, 0.5, 0.9);
     // The team's ships left, as small marks.
     vec.begin();
     for (let i = 0; i < Math.min(8, run.lives); i++) {
       const x = cx - ((Math.min(8, run.lives) - 1) * 14) / 2 + i * 14;
-      const y = cy - R * 0.08;
+      const y = sy + 28;
       vec.move(x - 5, y);
       vec.to(x + 5, y);
       vec.to(x, y + 8);
@@ -293,43 +494,80 @@ export class Menus {
     if (!mine) {
       // Someone new joins with a ship; their mods start at the next draft.
       this.shipsOnRim(vec, buttons, t, hue);
-      vec.text('PICK A SHIP', cx, cy + R * 0.3, Math.min(R * 0.08, 16), WHITE, 0.5, 0.9);
+      vec.text('PICK A SHIP', cx, cy + Ry * 0.3, Math.max(13, Math.min(R * 0.08, 16)), WHITE, 0.5, 0.95);
       return buttons;
     }
     const key = `${run.rid}.${run.idx}`;
     const options = draftOptions(run, me, run.idx - 1, mine.mods, run.roster.length > 1);
     const picked = s.pickedKey === key ? s.pickedMod : null;
     if (this.focus >= options.length) this.focus = Math.max(0, options.length - 1);
-    // Three lanes around the bottom, the mods half-way up them.
-    const spread = options.length >= 3 ? [-3, 0, 3] : [-2, 2];
     const f = {};
-    options.forEach((k, i) => {
-      const def = MODS.find((m) => m.key === k);
-      const lane = laneOf(web, web.start + spread[i]);
-      const on = picked === k;
-      const lit = on || (!picked && this.focus === i);
-      v.frame(lane, 0.24, f);
-      const size = Math.max(30, Math.min(70, f.len * 1.8));
-      // The lane, lit.
-      vec.begin();
-      for (const j of [lane, lane + 1]) {
-        v.B(j, 0, tmp1);
-        v.B(j, 1, tmp2);
-        vec.line(tmp1[0], tmp1[1], tmp2[0], tmp2[1]);
-      }
-      vec.glow(lit ? WHITE : hue, 1, lit ? 0.6 : 0.25);
-      vec.begin();
-      iconPath(vec, MOD_ICONS[k] || [], f.cx - size / 2, f.cy - size / 2, size);
-      vec.glow(on ? WHITE : hue, 1.8, picked && !on ? 0.35 : 1);
-      const have = mine.mods[k] || 0;
-      const name = have ? `${def.name} ${'I'.repeat(have + 1)}` : def.name;
-      const nsz = Math.min(15, Math.max(10, R * 0.065));
-      const ty = f.cy + size / 2 + 8;
-      vec.text(name, f.cx, ty, nsz, on ? WHITE : hue, 0.5, picked && !on ? 0.4 : 1);
-      vec.text(def.tag, f.cx, ty + nsz + 6, nsz * 0.62, WHITE, 0.5, picked && !on ? 0.3 : 0.75);
-      const hw = Math.max(size, vec.measure(name, nsz)) / 2 + 10;
-      buttons.push({ id: `mod:${k}`, x: f.cx - hw, y: f.cy - size / 2 - 8, w: hw * 2, h: size + nsz * 2 + 30, frame: false, on, aria: `${def.name}: ${def.tag}` });
-    });
+    if (compact) {
+      // A phone: three rows, one under the other, each a whole button (the lanes are too narrow to carry the words).
+      const rowW = Math.min(W - 28, 440);
+      const rowH = 76;
+      const gap = 10;
+      const total = options.length * rowH + (options.length - 1) * gap;
+      let y = Math.min(H - 108 - total, cy + Ry * 0.06);
+      options.forEach((k, i) => {
+        const def = MODS.find((m) => m.key === k);
+        const on = picked === k;
+        const lit = on || (!picked && this.focus === i);
+        const have = mine.mods[k] || 0;
+        const name = have ? `${def.name} ${'I'.repeat(have + 1)}` : def.name;
+        const dim = picked && !on;
+        buttons.push({
+          id: `mod:${k}`,
+          x: cx - rowW / 2,
+          y,
+          w: rowW,
+          h: rowH,
+          on: lit,
+          aria: `${def.name}: ${def.tag}`,
+          draw: (vc, b, hover, kk) => {
+            vc.begin();
+            iconPath(vc, MOD_ICONS[k] || [], b.x + 14, b.y + 15, 46);
+            vc.glow(on || hover ? WHITE : hue, 1.8, dim ? 0.35 : 1);
+            vc.text(name, b.x + 76, b.y + 17, 15, on || hover ? WHITE : hue, 0, dim ? 0.4 : 1);
+            const lines = vc.lines(def.tag, 11, b.w - 76 - 12);
+            lines.slice(0, 2).forEach((ln, li) => vc.text(ln, b.x + 76, b.y + 42 + li * 15, 11, WHITE, 0, dim ? 0.3 : 0.85));
+          },
+        });
+        y += rowH + gap;
+      });
+    } else {
+      // Three lanes around the bottom, the mods half-way up them.
+      const spread = options.length >= 3 ? [-3, 0, 3] : [-2, 2];
+      options.forEach((k, i) => {
+        const def = MODS.find((m) => m.key === k);
+        const lane = laneOf(web, web.start + spread[i]);
+        const on = picked === k;
+        const lit = on || (!picked && this.focus === i);
+        v.frame(lane, 0.24, f);
+        const size = Math.max(30, Math.min(70, f.len * 1.8));
+        // The lane, lit.
+        vec.begin();
+        for (const j of [lane, lane + 1]) {
+          v.B(j, 0, tmp1);
+          v.B(j, 1, tmp2);
+          vec.line(tmp1[0], tmp1[1], tmp2[0], tmp2[1]);
+        }
+        vec.glow(lit ? WHITE : hue, 1, lit ? 0.6 : 0.25);
+        vec.begin();
+        iconPath(vec, MOD_ICONS[k] || [], f.cx - size / 2, f.cy - size / 2, size);
+        vec.glow(on ? WHITE : hue, 1.8, picked && !on ? 0.35 : 1);
+        const have = mine.mods[k] || 0;
+        const name = have ? `${def.name} ${'I'.repeat(have + 1)}` : def.name;
+        const nsz = Math.min(16, Math.max(12, R * 0.05));
+        const ty = f.cy + size / 2 + 8;
+        const dim = picked && !on;
+        vec.text(name, f.cx, ty, nsz, on ? WHITE : hue, 0.5, dim ? 0.4 : 1);
+        const tagW = Math.max(110, f.len * 5.2);
+        vec.lines(def.tag, 11, tagW).forEach((ln, li) => vec.text(ln, f.cx, ty + nsz + 8 + li * 15, 11, WHITE, 0.5, dim ? 0.3 : 0.85));
+        const hw = Math.max(size, vec.measure(name, nsz), tagW * 0.8) / 2 + 10;
+        buttons.push({ id: `mod:${k}`, x: f.cx - hw, y: f.cy - size / 2 - 8, w: hw * 2, h: size + nsz + 70, frame: false, on, aria: `${def.name}: ${def.tag}` });
+      });
+    }
     // What this ship carries: a row of small icons.
     const owned = Object.entries(mine.mods);
     if (owned.length) {
@@ -337,12 +575,12 @@ export class Menus {
       const gap = 10;
       const total = owned.length * (sz + gap) - gap;
       let x = cx - Math.min(total, W - 40) / 2;
-      const y = Math.min(H - 128, cy + R + 14);
+      const y = Math.min(H - 128, cy + Ry + 14);
       for (const [k, c] of owned.slice(0, Math.floor((W - 40) / (sz + gap)))) {
         vec.begin();
         iconPath(vec, MOD_ICONS[k] || [], x, y, sz);
         vec.glow(hue, 1, 0.7);
-        if (c > 1) vec.text('I'.repeat(c), x + sz / 2, y + sz + 4, 6, WHITE, 0.5, 0.6);
+        if (c > 1) vec.text('I'.repeat(c), x + sz / 2, y + sz + 4, 7, WHITE, 0.5, 0.7);
         x += sz + gap;
       }
     }
@@ -388,26 +626,27 @@ export class Menus {
     const run = s.run;
     const buttons = [];
     if (!run) return buttons;
-    const { cx, cy, R } = this.geo();
+    if (app.short) return this.resultsShort(vec, W, H, t, hue);
+    const { cx, cy, R, Ry } = this.geo();
     const r = run.result || { cleared: false, cause: 0, zone: '', depth: run.idx };
     let title = r.cleared ? 'RUN CLEAR' : 'GAME OVER';
     if (run.mode === 'descent') title = `DEPTH ${r.depth}`;
     if (run.mode === 'practice') title = r.cleared ? 'ZONE CLEAR' : 'PRACTICE';
-    const big = Math.min(R * 0.2, 46, W / 9);
-    let y = cy - R * 0.62;
+    const big = Math.max(26, Math.min(R * 0.2, 46, W / 9));
+    let y = cy - Ry * 0.66;
     vec.text(title, cx, y, big, r.cleared ? WHITE : hue, 0.5, 1, 1.2);
     y += big + 14;
     const cause = DEATH_NAMES[r.cause];
-    if (!r.cleared && (cause || r.ended)) vec.text(`${r.ended ? 'ENDED' : CAUSE[cause] || cause} · ${r.zone}`, cx, y, Math.min(13, R * 0.06), WHITE, 0.5, 0.8);
+    if (!r.cleared && (cause || r.ended)) vec.text(`${r.ended ? 'ENDED' : CAUSE[cause] || cause} · ${r.zone}`, cx, y, Math.max(11, Math.min(13, R * 0.06)), WHITE, 0.5, 0.9);
     const mine = run.players[s.room.me.id];
-    if (mine) vec.text(`KILLS ${mine.kills}   CHORDS ${mine.chords}   BOSSES ${run.stats.bosses}`, cx, cy + R * 0.62, Math.min(11, R * 0.05), hue, 0.5, 0.75);
+    if (mine) vec.text(`KILLS ${mine.kills}   CHORDS ${mine.chords}   BOSSES ${run.stats.bosses}`, cx, cy + Ry * 0.66, Math.max(10.5, Math.min(12, R * 0.05)), hue, 0.5, 0.85);
     const ssz = Math.min(R * 0.17, 40);
     y = cy - ssz / 2;
     vec.text(String(run.score), cx, y, ssz, WHITE, 0.5, 1, 1.1);
     y += ssz + 12;
     const best = run.mode === 'descent' ? app.profile.bestDescent : app.profile.best;
-    if (app.newBest) vec.text('NEW BEST', cx, y, Math.min(14, R * 0.07), hue, 0.5, app.calm ? 0.95 : 0.7 + 0.3 * Math.abs(Math.sin(t * 2.5)));
-    else if (best) vec.text(`BEST ${best}`, cx, y, Math.min(12, R * 0.06), hue, 0.5, 0.7);
+    if (app.newBest) vec.text('NEW BEST', cx, y, Math.max(12, Math.min(14, R * 0.07)), hue, 0.5, app.calm ? 0.95 : 0.7 + 0.3 * Math.abs(Math.sin(t * 2.5)));
+    else if (best) vec.text(`BEST ${best}`, cx, y, Math.max(11, Math.min(12, R * 0.06)), hue, 0.5, 0.8);
     y += 30;
     const list = Object.entries(run.players)
       .map(([id, p]) => ({ id, ...p }))
@@ -420,11 +659,11 @@ export class Menus {
       shipIcon(vec, p.ship, x + 10, y + 7, 8);
       vec.glow(p.id === s.room.me.id ? WHITE : hue, 1, 0.8);
       app.nameText(p.n || 'PLAYER', x + 26, y, rowW * 0.55, false);
-      vec.text(`${p.score}`, x + rowW, y + 1, 10, WHITE, 1, 0.85);
+      vec.text(`${p.score}`, x + rowW, y + 1, 11, WHITE, 1, 0.9);
       y += 24;
     }
     for (const u of (app.unlocked || []).slice(0, 3)) {
-      vec.text(`NEW ${u}`, cx, y, 11, WHITE, 0.5, 0.9);
+      vec.text(`NEW ${u}`, cx, y, 12, WHITE, 0.5, 0.95);
       y += 20;
     }
     if (s.isHost) buttons.push({ id: 'tohub', x: W - 12 - 96, y: 8, w: 96, h: 44, label: 'SHIPS', small: true });

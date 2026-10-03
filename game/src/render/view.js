@@ -21,7 +21,10 @@ export class View {
     this.rim = [];
     this.cx = 0;
     this.cy = 0;
-    this.S = 100;
+    this.S = 100; // pixels per unit of the web, the shorter way
+    this.Sx = 100; // across and down: the web stretches along the longer side of the screen so it fills it
+    this.Sy = 100;
+    this.maxStretch = 0; // 0: by the screen's shape (a little on a wide window, more on a tall phone)
     this.vp = [0, 0];
     this.camZ = 0;
     this.hue = '#3dffb0';
@@ -57,22 +60,45 @@ export class View {
     const side = 14;
     const availW = Math.max(40, this.W - side * 2);
     const availH = Math.max(40, this.H - this.top - this.bottom);
+    let ux; // the web's unit size across and down, with its margin
+    let uy;
     if (web.closed && this.spins) {
       // Room for any spin: the widest point decides.
       let r = 0;
       for (const p of web.rim) r = Math.max(r, Math.hypot(p[0], p[1]));
-      this.S = Math.min(availW, availH) / (2 * r * 1.04);
-      this.cx = this.W / 2;
-      this.cy = this.top + availH / 2;
+      ux = uy = 2 * r * 1.04;
     } else if (web.closed) {
-      // A still loop fills the space it has, centred on its vanishing point (the camera's lean has a little room).
       let rx = 0;
       let ry = 0;
       for (const p of web.rim) {
         rx = Math.max(rx, Math.abs(p[0]));
         ry = Math.max(ry, Math.abs(p[1]));
       }
-      this.S = Math.min(availW / (2 * rx * 1.05), availH / (2 * ry * 1.05));
+      ux = 2 * rx * 1.05;
+      uy = 2 * ry * 1.05;
+    } else {
+      let x0 = Infinity;
+      let x1 = -Infinity;
+      let y0 = web.vp[1];
+      let y1 = -Infinity;
+      for (const p of web.rim) {
+        x0 = Math.min(x0, p[0]);
+        x1 = Math.max(x1, p[0]);
+        y0 = Math.min(y0, p[1]);
+        y1 = Math.max(y1, p[1]);
+      }
+      ux = (x1 - x0) * 1.06;
+      uy = (y1 - y0) * 1.1;
+    }
+    const fx = availW / ux;
+    const fy = availH / uy;
+    // The web keeps its shape on the shorter side and stretches along the longer one, up to a limit: a tall phone gets
+    // a taller tunnel, a wide window a wider one, instead of a small circle with black above and below.
+    const cap = this.maxStretch || (this.W >= this.H ? (this.W >= this.H * 1.7 ? 1.6 : 1.3) : 1.55);
+    this.S = Math.min(fx, fy);
+    this.Sx = Math.min(fx, this.S * cap);
+    this.Sy = Math.min(fy, this.S * cap);
+    if (web.closed) {
       this.cx = this.W / 2;
       this.cy = this.top + availH / 2;
     } else {
@@ -86,12 +112,17 @@ export class View {
         y0 = Math.min(y0, p[1]);
         y1 = Math.max(y1, p[1]);
       }
-      const ww = x1 - x0;
-      const hh = y1 - y0;
-      this.S = Math.min(availW / (ww * 1.06), availH / (hh * 1.1));
-      this.cx = this.W / 2 - ((x0 + x1) / 2) * this.S;
-      this.cy = this.top + availH / 2 - ((y0 + y1) / 2) * this.S;
+      this.cx = this.W / 2 - ((x0 + x1) / 2) * this.Sx;
+      this.cy = this.top + availH / 2 - ((y0 + y1) / 2) * this.Sy;
     }
+  }
+
+  /** The vanishing point on screen. */
+  vx() {
+    return this.cx + this.vp[0] * this.Sx;
+  }
+  vy() {
+    return this.cy + this.vp[1] * this.Sy;
   }
 
   /** The lane width at the rim, in CSS px (for touch sensitivity and hit areas). */
@@ -102,9 +133,9 @@ export class View {
     for (let i = 0; i < web.n; i++) {
       const a = web.rim[i];
       const b = web.rim[web.closed ? (i + 1) % web.n : i + 1];
-      sum += Math.hypot(a[0] - b[0], a[1] - b[1]);
+      sum += Math.hypot((a[0] - b[0]) * this.Sx, (a[1] - b[1]) * this.Sy);
     }
-    return (sum / web.n) * this.S;
+    return sum / web.n;
   }
 
   // ---------------------------------------------------------------- projection
@@ -138,8 +169,8 @@ export class View {
     const y = p[1] + (q[1] - p[1]) * f;
     const zz = this.depth(z);
     const s = 1 / (1 + web.k * Math.max(-0.2, zz));
-    out[0] = this.cx + (this.vp[0] + (x - this.vp[0]) * s) * this.S;
-    out[1] = this.cy + (this.vp[1] + (y - this.vp[1]) * s) * this.S;
+    out[0] = this.cx + (this.vp[0] + (x - this.vp[0]) * s) * this.Sx;
+    out[1] = this.cy + (this.vp[1] + (y - this.vp[1]) * s) * this.Sy;
     return out;
   }
 
@@ -149,8 +180,8 @@ export class View {
     const p = this.rim[web.closed ? ((j % web.n) + web.n) % web.n : Math.max(0, Math.min(web.n, j))];
     const zz = this.depth(z);
     const s = 1 / (1 + web.k * Math.max(-0.2, zz));
-    out[0] = this.cx + (this.vp[0] + (p[0] - this.vp[0]) * s) * this.S;
-    out[1] = this.cy + (this.vp[1] + (p[1] - this.vp[1]) * s) * this.S;
+    out[0] = this.cx + (this.vp[0] + (p[0] - this.vp[0]) * s) * this.Sx;
+    out[1] = this.cy + (this.vp[1] + (p[1] - this.vp[1]) * s) * this.Sy;
     return out;
   }
 
@@ -163,19 +194,14 @@ export class View {
     f.ax = (tmpB[0] - tmpA[0]) / 2;
     f.ay = (tmpB[1] - tmpA[1]) / 2;
     const len = Math.hypot(f.ax, f.ay) || 1;
-    // Toward the vanishing point.
-    let dx = this.cx + this.vp[0] * this.S - f.cx;
-    let dy = this.cy + this.vp[1] * this.S - f.cy;
-    const dl = Math.hypot(dx, dy) || 1;
-    // Keep the depth axis square to the lane (a tidy shape even where the lanes fan out).
-    dx = -f.ay;
-    dy = f.ax;
-    if (dx * (this.cx + this.vp[0] * this.S - f.cx) + dy * (this.cy + this.vp[1] * this.S - f.cy) < 0) (dx = -dx), (dy = -dy);
+    // Keep the depth axis square to the lane (a tidy shape even where the lanes fan out), pointing at the vanishing point.
+    let dx = -f.ay;
+    let dy = f.ax;
+    if (dx * (this.vx() - f.cx) + dy * (this.vy() - f.cy) < 0) (dx = -dx), (dy = -dy);
     const k = len / (Math.hypot(dx, dy) || 1);
     f.dx = dx * k;
     f.dy = dy * k;
     f.len = len;
-    void dl;
     // Far away things stay big enough to read.
     if (len < this.minSize) {
       const g = this.minSize / len;
@@ -232,8 +258,8 @@ export class View {
   laneAtAngle(angle) {
     const web = this.web;
     if (!web) return null;
-    const cx = this.cx + this.vp[0] * this.S;
-    const cy = this.cy + this.vp[1] * this.S;
+    const cx = this.vx();
+    const cy = this.vy();
     let best = 0;
     let bestD = Infinity;
     for (let l = 0; l < web.n; l++) {
@@ -278,8 +304,8 @@ export class View {
     if (me && !calm && this.web.closed) {
       this.camZ = 0;
       this.P(me.u, 0, tmpC);
-      lx = -((tmpC[0] - this.cx) / this.S) * 0.07;
-      ly = -((tmpC[1] - this.cy) / this.S) * 0.07;
+      lx = -((tmpC[0] - this.cx) / this.Sx) * 0.07;
+      ly = -((tmpC[1] - this.cy) / this.Sy) * 0.07;
     }
     this.lean[0] += (lx - this.lean[0]) * 0.08;
     this.lean[1] += (ly - this.lean[1]) * 0.08;
@@ -327,6 +353,23 @@ export class View {
       v.to(tmpA[0], tmpA[1]);
     }
     v.glow(this.hue, 1, 0.34 + 0.08 * pulse + 0.14 * od);
+    // Posters ask for a field of faint rings down the tube (depth you can count); play has only the travelling rungs.
+    if (scene.rings) {
+      v.begin();
+      for (const z of scene.rings) {
+        if (this.depth(z) < 0.02) continue;
+        for (let j = 0; j < bounds; j++) {
+          this.B(j, z, tmpA);
+          if (j === 0) v.move(tmpA[0], tmpA[1]);
+          else v.to(tmpA[0], tmpA[1]);
+        }
+        if (web.closed) {
+          this.B(0, z, tmpA);
+          v.to(tmpA[0], tmpA[1]);
+        }
+      }
+      v.glow(this.hue, 0.8, 0.2);
+    }
     // Rungs: rings travelling up the tube, one per beat (still and faint in Calm).
     const beatFrac = (w.step % STEPS_PER_BEAT) / STEPS_PER_BEAT + scene.alpha / STEPS_PER_BEAT;
     v.begin();

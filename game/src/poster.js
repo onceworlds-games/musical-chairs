@@ -2,7 +2,7 @@
 // the game's own renderer, with no platform and no network, for the store art. Bots fly a seeded zone to a lively
 // moment; the last few frames are drawn with the phosphor fade so trails and shards look the way they do in play.
 // Sets window.__posterReady when the picture is done.
-import { Vector } from './render/vector.js';
+import { Vector, tone } from './render/vector.js';
 import { View } from './render/view.js';
 import { Fx } from './render/fx.js';
 import { SHAPE, SHIP_SHAPES } from './render/shapes.js';
@@ -42,28 +42,52 @@ const COVER = {
   world: 0,
   shape: 'circle',
   ships: [0],
+  stretch: 1.75,
   boss: true,
+  rings: [0.07, 0.15, 0.25, 0.37, 0.5, 0.65, 0.82],
+  trails: true,
+  bloom: true,
+  title: true,
   cast: [
-    [E.FLIPPER, 3, 0.24],
-    [E.FLIPPER, -3, 0.32],
-    [E.FLIPPER, 6, 0.5],
-    [E.FLIPPER, -6, 0.46],
-    [E.TANKER, 4, 0.6],
-    [E.SPIKER, -4, 0.68],
-    [E.FUSEBALL, 1, 0.56],
-    [E.PULSAR, -1, 0.74],
-    [E.WEAVER, -2, 0.18],
     [E.FLIPPER, 2, 0],
-    [E.SHOT, 5, 0.3],
+    [E.FLIPPER, -3, 0.15],
+    [E.WEAVER, 5, 0.22],
+    [E.FLIPPER, -6, 0.1],
+    [E.FLIPPER, 8, 0.12],
+    [E.FLIPPER, 4, 0.34],
+    [E.FLIPPER, -2, 0.4],
+    [E.FLIPPER, 7, 0.46],
+    [E.TANKER, -5, 0.52],
+    [E.FUSEBALL, 1, 0.44],
+    [E.SPIKER, -8, 0.36],
+    [E.GHOST, 6, 0.3],
+    [E.FLIPPER, -7, 0.6],
+    [E.FLIPPER, 3, 0.62],
+    [E.PULSAR, -1, 0.7],
+    [E.TANKER, 5, 0.68],
+    [E.BOMBER, 9, 0.78],
+    [E.FLIPPER, -4, 0.74],
+    [E.FLIPPER, 0, 0.82],
+    [E.SIREN, 11, 0.58],
+    [E.SIREN, 13, 0.58],
+    [E.SIREN, 15, 0.58],
+    [E.SHOT, 5, 0.26],
   ],
-  spikes: [[-4, 0.36], [7, 0.28]],
-  bolts: [[0, 0.08], [0, 0.2], [0, 0.32], [0, 0.46]],
-  bursts: [[E.FLIPPER, 0, 0.58], [E.TANKER, 5, 0.42]],
+  pulses: [-1],
+  spikes: [[-8, 0.42], [10, 0.3]],
+  bolts: [[0, 0.07], [0, 0.19], [0, 0.31], [0, 0.43], [0, 0.55], [1, 0.14], [-1, 0.14]],
+  chord: [-6, 5, 1],
+  chordDepths: [0.34, 0.4, 0.62],
+  header: 0.13,
 };
 const CHORD = {
   world: 1,
   shape: 'square',
   ships: [1],
+  stretch: 1.75,
+  rings: [0.1, 0.22, 0.36, 0.52, 0.7],
+  trails: true,
+  bloom: true,
   cast: [
     [E.FLIPPER, -2, 0.22],
     [E.WEAVER, 3, 0.3],
@@ -72,6 +96,9 @@ const CHORD = {
     [E.TANKER, 1, 0.66],
     [E.FLIPPER, 8, 0.2],
     [E.SPIKER, -8, 0.5],
+    [E.FLIPPER, -9, 0.12],
+    [E.FLIPPER, 11, 0.4],
+    [E.FLIPPER, 4, 0.78],
   ],
   spikes: [[-8, 0.42]],
   bolts: [[-1, 0.12], [0, 0.12], [1, 0.12], [-1, 0.3], [0, 0.3], [1, 0.3]],
@@ -79,22 +106,36 @@ const CHORD = {
 };
 const TOGETHER = {
   world: 3,
-  shape: 'hourglass',
-  ships: [0, 3, 5],
-  shipLanes: [0, -3, 3],
+  shape: 'heptagon',
+  ships: [0, 5],
+  shipLanes: [-1, 1],
+  stretch: 1.55,
+  t0: 0,
+  header: 0.025,
+  rings: [0.1, 0.2, 0.32, 0.46, 0.62, 0.8],
+  trails: true,
+  bloom: true,
   cast: [
-    [E.FLIPPER, -1, 0],
-    [E.FLIPPER, 2, 0],
     [E.FLIPPER, 5, 0.3],
-    [E.BOMBER, -5, 0.84],
-    [E.MINE, -6, 0.4],
+    [E.WEAVER, -5, 0.22],
+    [E.BOMBER, -6, 0.8],
+    [E.MINE, -7, 0.4],
     [E.TANKER, 7, 0.55],
-    [E.GHOST, -8, 0.36],
+    [E.GHOST, -9, 0.36],
     [E.PULSAR, 9, 0.62],
     [E.FLIPPER, 10, 0.7],
+    [E.FLIPPER, -3, 0.5],
+    [E.FLIPPER, 4, 0.76],
+    [E.FUSEBALL, 0, 0.58],
+    [E.FLIPPER, -11, 0.28],
+    [E.SIREN, 12, 0.5],
+    [E.SIREN, 14, 0.5],
+    [E.FLIPPER, 14, 0.2],
   ],
-  bolts: [[0, 0.15], [0, 0.35], [-3, 0.22], [3, 0.1], [3, 0.4]],
-  bursts: [[E.FLIPPER, 1, 0.02], [E.FLIPPER, -2, 0.02]],
+  pulses: [9],
+  bolts: [[-1, 0.15], [-1, 0.35], [1, 0.22], [1, 0.42], [1, 0.6]],
+  chord: [-5, 5, 9],
+  chordDepths: [0.4, 0.34, 0.5],
   tether: true,
 };
 
@@ -111,8 +152,9 @@ function thumb(vec, W, H, o) {
   while (w.phase === 0) w.update();
   const fx = new Fx();
   const view = new View(vec, fx);
+  if (o.stretch) view.maxStretch = o.stretch;
   view.setWeb(w.web, def.hue, false);
-  view.layout(W, H, H * 0.03, H * 0.03);
+  view.layout(W, H, H * (o.header || 0.03), H * 0.05);
   view.minSize = Math.max(9, H / 55);
   const n = w.n;
   const at = (off) => (((w.web.start + off) % n) + n) % n;
@@ -129,6 +171,7 @@ function thumb(vec, W, H, o) {
     if (z === 0) e.st = 1;
   }
   for (const [off, h] of o.spikes || []) w.spikes[at(off)] = h;
+  for (const off of o.pulses || []) w.pulses.push([at(off), w.step + 60]);
   const tints = o.ships.map((_, k) => [WHITE, '#ffd23d', '#ff5c8a'][k] || WHITE);
   // Bolts in flight, placed where the picture wants them.
   const placeBolts = () => {
@@ -153,37 +196,30 @@ function thumb(vec, W, H, o) {
     }
     fx.update(1 / 40);
     vec.frame(1 / 60, 1);
-    view.draw({ w, alpha: 1, t: 1.4 + i / 40, me: 0, tints, calm: false, pulse: i > frames - 3 ? 1 : 0.4, od: false, shake: null, rim: 'plain', trails: [] });
+    if (i === frames - 1 && o.rings) tunnelLight(vec, view, def.hue);
+    view.draw({ w, alpha: 1, t: (o.t0 ?? 1.4) + i / 40, me: 0, tints, calm: false, pulse: i > frames - 3 ? 1 : 0.4, od: false, shake: null, rim: 'plain', trails: [], rings: i === frames - 1 ? o.rings : null });
     fx.draw(vec);
   }
-  if (o.boss) {
-    // The Hydra far away: a serpent's segments circling the end of the tunnel.
-    const vx = view.cx + view.vp[0] * view.S;
-    const vy = view.cy + view.vp[1] * view.S;
-    const r = view.S * 0.12;
-    vec.begin();
-    for (let k = 0; k < 6; k++) {
-      const a = -2.6 + k * 0.52;
-      const x = vx + Math.cos(a) * r * 1.5;
-      const y = vy + Math.sin(a) * r * 1.5;
-      const rr = r * (0.46 - k * 0.04);
-      for (let i = 0; i <= 6; i++) {
-        const b = Math.PI / 6 + (Math.PI * 2 * i) / 6;
-        if (i === 0) vec.move(x + Math.cos(b) * rr, y + Math.sin(b) * rr);
-        else vec.to(x + Math.cos(b) * rr, y + Math.sin(b) * rr);
-      }
+  if (o.trails) {
+    // Streaks behind everything that climbs: where it was a moment ago, fading toward the far end.
+    for (const [type, off, z] of o.cast) {
+      if (z < 0.08 || type === E.SPIKER || type === E.MINE) continue;
+      streak(vec, view, at(off), z, 0.1 + 0.18 * (1 - z), def.hue, type === E.SHOT ? WHITE : null);
     }
-    vec.glow(def.hue, 2.2, 1);
-    vec.thin(WHITE, 1.2, 0.7);
+    for (const [off, z] of o.bolts || []) streak(vec, view, at(off), z, 0.13, WHITE, WHITE, 1.6);
   }
+  if (o.boss) hydra(vec, view, def.hue);
   if (o.chord) {
     // A chord: three lanes at once, a triangle joining the kills, a burst at each.
+    const zs = o.chordDepths || [0.34, 0.34, 0.34];
     const lanes = o.chord.map(at);
-    const pts = lanes.map((l) => view.P(l, 0.34, [0, 0]));
+    const pts = lanes.map((l, k) => view.P(l, zs[k], [0, 0]));
     for (let k = 0; k < 3; k++) {
-      fx.shatter(shapeAt(view, E.FLIPPER, lanes[k], 0.34), def.hue, 190, 0.8);
+      const z = zs[k];
+      fx.shatter(shapeAt(view, E.FLIPPER, lanes[k], z), def.hue, 190, 0.8);
       fx.ring(pts[k][0], pts[k][1], 6, H * 0.08, 0.6, WHITE, 18);
-      fx.sparks(pts[k][0], pts[k][1], WHITE, 24, H * 0.35, H / 70);
+      fx.ring(pts[k][0], pts[k][1], 3, H * 0.14, 0.9, def.hue, 18);
+      fx.sparks(pts[k][0], pts[k][1], WHITE, 34, H * 0.4, H / 60);
     }
     fx.update(0.1);
     vec.begin();
@@ -191,9 +227,129 @@ function thumb(vec, W, H, o) {
     vec.to(pts[1][0], pts[1][1]);
     vec.to(pts[2][0], pts[2][1]);
     vec.to(pts[0][0], pts[0][1]);
-    vec.glow(WHITE, 2, 1);
+    vec.glow(WHITE, 1.5, 0.9);
     fx.draw(vec);
+    for (const p of pts) rays(vec, p[0], p[1], H * 0.11, 14, 3);
   }
+  if (o.title) title(vec, W, H, def.hue);
+  if (o.bloom) bloom(vec, W, H);
+  if (o.vignette !== false) vignette(vec, W, H);
+}
+
+/** The light at the far end of the tunnel: a soft pool the lanes run into. */
+function tunnelLight(vec, view, hue) {
+  const c = vec.ctx;
+  const x = view.vx();
+  const y = view.vy();
+  const r = view.S * 0.62;
+  const t = tone(hue).rgb;
+  c.save();
+  c.globalCompositeOperation = 'lighter';
+  c.translate(x, y);
+  c.scale(view.Sx / view.S, view.Sy / view.S);
+  const g = c.createRadialGradient(0, 0, 0, 0, 0, r);
+  g.addColorStop(0, `rgba(${t[0]},${t[1]},${t[2]},0.11)`);
+  g.addColorStop(0.5, `rgba(${t[0]},${t[1]},${t[2]},0.04)`);
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  c.fillStyle = g;
+  c.fillRect(-r, -r, r * 2, r * 2);
+  c.restore();
+}
+
+/** A line from where a thing is to where it was a moment ago (further down the lane), fading out. */
+function streak(vec, view, lane, z, len, hue, core = null, width = 1.1) {
+  const a = [0, 0];
+  const b = [0, 0];
+  const steps = 5;
+  for (let i = 0; i < steps; i++) {
+    const z0 = z + (len * i) / steps;
+    const z1 = z + (len * (i + 1)) / steps;
+    if (z1 >= 1) break;
+    view.P(lane, z0, a);
+    view.P(lane, z1, b);
+    vec.begin();
+    vec.line(a[0], a[1], b[0], b[1]);
+    vec.thin(core || hue, width, 0.5 * (1 - i / steps));
+  }
+}
+
+/** Rays from a point: a burst's glints. */
+function rays(vec, x, y, r, count, seed) {
+  vec.begin();
+  for (let i = 0; i < count; i++) {
+    const a = (Math.PI * 2 * i) / count + seed * 0.7 + Math.sin(i * 12.9898 + seed) * 0.15;
+    const r0 = r * (0.25 + 0.15 * Math.abs(Math.sin(i * 3.1 + seed)));
+    const r1 = r * (0.7 + 0.5 * Math.abs(Math.sin(i * 7.7 + seed)));
+    vec.line(x + Math.cos(a) * r0, y + Math.sin(a) * r0, x + Math.cos(a) * r1, y + Math.sin(a) * r1);
+  }
+  vec.glow(WHITE, 1.3, 1);
+}
+
+/** The Hydra a long way down the tunnel: a serpent's segments circling the far end. */
+function hydra(vec, view, hue) {
+  const vx = view.vx();
+  const vy = view.vy();
+  const r = view.S * 0.13;
+  vec.begin();
+  for (let k = 0; k < 7; k++) {
+    const a = -2.7 + k * 0.5;
+    const x = vx + Math.cos(a) * r * 1.5 * (view.Sx / view.S);
+    const y = vy + Math.sin(a) * r * 1.5 * (view.Sy / view.S);
+    const rr = r * (0.48 - k * 0.035);
+    for (let i = 0; i <= 6; i++) {
+      const b = Math.PI / 6 + (Math.PI * 2 * i) / 6;
+      if (i === 0) vec.move(x + Math.cos(b) * rr, y + Math.sin(b) * rr);
+      else vec.to(x + Math.cos(b) * rr, y + Math.sin(b) * rr);
+    }
+  }
+  vec.glow(hue, 2.4, 1.1);
+  vec.thin(WHITE, 1.4, 0.85);
+  // Its eye: the white-hot head.
+  const hx = vx + Math.cos(-2.7) * r * 1.5 * (view.Sx / view.S);
+  const hy = vy + Math.sin(-2.7) * r * 1.5 * (view.Sy / view.S);
+  vec.dot(hx, hy, r * 0.5, WHITE, 0.6);
+}
+
+/** The title word in the stroke font, across the top. */
+function title(vec, W, H, hue) {
+  const size = H * 0.092;
+  vec.text('RIMSHOT', W / 2, H * 0.03, size, hue, 0.5, 1, 0.8);
+  vec.text('RIMSHOT', W / 2 + 1, H * 0.03 + 1, size, WHITE, 0.5, 0.6, 0.25);
+}
+
+/** A glow that spreads: the picture blurred and laid back over itself, twice, so every line has a halo. */
+function bloom(vec, W, H) {
+  const c = vec.ctx;
+  const cv = vec.canvas;
+  const copy = document.createElement('canvas');
+  copy.width = cv.width;
+  copy.height = cv.height;
+  copy.getContext('2d').drawImage(cv, 0, 0);
+  c.save();
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.globalCompositeOperation = 'lighter';
+  for (const [blur, alpha] of [[H * 0.022, 0.8], [H * 0.006, 0.55]]) {
+    c.filter = `blur(${blur}px)`;
+    c.globalAlpha = alpha;
+    c.drawImage(copy, 0, 0);
+  }
+  c.restore();
+  c.filter = 'none';
+  c.globalAlpha = 1;
+}
+
+/** The corners fall into the dark, so the eye stays in the tunnel. */
+function vignette(vec, W, H) {
+  const c = vec.ctx;
+  c.save();
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.globalCompositeOperation = 'source-over';
+  const g = c.createRadialGradient(vec.canvas.width / 2, vec.canvas.height / 2, Math.min(W, H) * 0.35, vec.canvas.width / 2, vec.canvas.height / 2, Math.hypot(W, H) * 0.62);
+  g.addColorStop(0, 'rgba(2,4,3,0)');
+  g.addColorStop(1, 'rgba(2,4,3,0.72)');
+  c.fillStyle = g;
+  c.fillRect(0, 0, vec.canvas.width, vec.canvas.height);
+  c.restore();
 }
 
 function shapeAt(view, type, lane, z) {
@@ -211,42 +367,55 @@ function draftPoster(vec, W, H) {
   const w = new World({ zone: { mode: 'run', world: 2, level: 1, shape: 'circle', bpm: 116, seed: 9, oc: 0 }, players: [{ id: 'a', ship: 0, kind: 'driven' }] });
   w.spawns = [];
   const view = new View(vec, new Fx());
+  view.maxStretch = 1.55;
   view.setWeb(w.web, hue, false);
-  view.layout(W, H, H * 0.04, H * 0.04);
+  view.layout(W, H, H * 0.03, H * 0.03);
   vec.frame(1, 0);
-  view.draw({ w, alpha: 1, t: 0.3, me: 0, tints: [WHITE], calm: true, pulse: 0.6, od: false, shake: null, rim: 'plain', trails: [] });
-  const cx = view.cx;
-  const cy = view.cy;
+  tunnelLight(vec, view, hue);
+  view.draw({ w, alpha: 1, t: 0.3, me: 0, tints: [WHITE], calm: true, pulse: 0.6, od: false, shake: null, rim: 'plain', trails: [], rings: [0.1, 0.2, 0.32, 0.46, 0.62, 0.8] });
+  const cx = view.vx();
+  const cy = view.vy();
   const R = view.S;
   const c = vec.ctx;
   c.globalCompositeOperation = 'source-over';
-  const g = c.createRadialGradient(cx, cy, 0, cx, cy, R * 0.75);
-  g.addColorStop(0, 'rgba(2,4,3,0.85)');
+  c.save();
+  c.translate(cx, cy);
+  c.scale(view.Sx / view.S, view.Sy / view.S);
+  const g = c.createRadialGradient(0, 0, 0, 0, 0, R * 0.8);
+  g.addColorStop(0, 'rgba(2,4,3,0.9)');
   g.addColorStop(1, 'rgba(2,4,3,0)');
   c.fillStyle = g;
-  c.fillRect(0, 0, W, H);
+  c.fillRect(-R, -R, R * 2, R * 2);
+  c.restore();
   c.globalCompositeOperation = 'lighter';
-  vec.text('PICK ONE', cx, cy - R * 0.5, R * 0.13, WHITE, 0.5, 1, 1.1);
-  const picks = [['chain', -3], ['metronome', 0], ['ricochet', 3]];
+  vec.text('PICK ONE', cx, cy - R * 0.62, R * 0.17, WHITE, 0.5, 1, 1.1);
+  const picks = [['chain', -4], ['metronome', 0], ['ricochet', 4]];
   const f = {};
   for (const [k, off] of picks) {
     const def = MODS.find((m) => m.key === k);
     const lane = (w.web.start + off + w.n) % w.n;
     const on = k === 'metronome';
-    view.frame(lane, 0.24, f);
+    view.frame(lane, 0.44, f);
     vec.begin();
     for (const j of [lane, lane + 1]) {
       const a = view.B(j, 0, [0, 0]);
       const b = view.B(j, 1, [0, 0]);
       vec.line(a[0], a[1], b[0], b[1]);
     }
-    vec.glow(on ? WHITE : hue, 1.2, on ? 0.8 : 0.35);
-    const size = R * 0.2;
+    vec.glow(on ? WHITE : hue, 1.4, on ? 0.9 : 0.45);
+    const size = R * 0.4;
     vec.begin();
     iconPath(vec, MOD_ICONS[k], f.cx - size / 2, f.cy - size / 2, size);
-    vec.glow(on ? WHITE : hue, 2.6, 1);
-    vec.text(def.name, f.cx, f.cy + size / 2 + 12, R * 0.075, on ? WHITE : hue, 0.5, 1);
+    vec.glow(on ? WHITE : hue, 3.4, 1);
+    vec.text(def.name, f.cx, f.cy - size / 2 - R * 0.07 - 12, R * 0.07, on ? WHITE : hue, 0.5, 1);
   }
+  // The ship on the rim, the three notes it will play.
+  const ship = view.frame(w.web.start, 0, {});
+  vec.begin();
+  view.strokes(SHIP_SHAPES[0], { ...ship, cx: ship.cx - ship.dx * 0.06, cy: ship.cy - ship.dy * 0.06 }, 1, 1.05);
+  vec.glow(WHITE, 2.2, 1.1);
+  bloom(vec, W, H);
+  vignette(vec, W, H);
 }
 
 /** The icon: a white ship on a mint ring of lanes. */

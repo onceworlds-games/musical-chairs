@@ -205,8 +205,8 @@ export class Input {
     const perLane = Math.max(18, Math.min(60, view.laneWidth() * 0.85));
     let d;
     if (view.web.closed) {
-      const cx = view.cx + view.vp[0] * view.S;
-      const cy = view.cy + view.vp[1] * view.S;
+      const cx = view.vx();
+      const cy = view.vy();
       const rx = x - cx;
       const ry = y - cy;
       const r = Math.hypot(rx, ry);

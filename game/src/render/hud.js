@@ -16,12 +16,21 @@ export class Hud {
 
   /** A word of the moment. kind: 'big' (centre), 'small' (under it). */
   say(text, { size = 1, life = 1.4, color = WHITE, kind = 'big', priority = 0 } = {}) {
+    text = String(text);
+    // The same word again (two zaps, a string of pickups) lights the one already up instead of stacking.
+    const same = this.msgs.find((m) => m.text === text && m.kind === kind);
+    if (same) {
+      same.life = same.max = life;
+      return;
+    }
     if (kind === 'big') {
       // A new big word replaces a weaker one.
       this.msgs = this.msgs.filter((m) => m.kind !== 'big' || m.priority > priority);
     }
-    if (this.msgs.length > 5) this.msgs.shift();
-    this.msgs.push({ text: String(text), size, life, max: life, color, kind, priority });
+    // At most three small words at once: the newest push the oldest out.
+    const smalls = this.msgs.filter((m) => m.kind !== 'big');
+    if (kind !== 'big' && smalls.length >= 3) this.msgs.splice(this.msgs.indexOf(smalls[0]), 1);
+    this.msgs.push({ text, size, life, max: life, color, kind, priority });
   }
 
   showHint(text) {
@@ -146,10 +155,10 @@ export class Hud {
       const f = m.life / m.max;
       const appear = Math.min(1, (1 - f) * 8);
       const fade = Math.min(1, f * 3);
-      const base = (small ? 22 : 34) * m.size;
-      const s = m.kind === 'big' ? base * (d.calm ? 1 : 0.85 + 0.15 * appear) : base * 0.5;
-      const y = H * 0.36 + stack;
-      v.text(m.text, W / 2, y, s, m.color, 0.5, fade * (m.kind === 'big' ? 1 : 0.85), m.kind === 'big' ? 1.2 : 1);
+      const base = (small ? 19 : 28) * m.size;
+      const s = m.kind === 'big' ? base * (d.calm ? 1 : 0.85 + 0.15 * appear) : Math.max(11, base * 0.5);
+      const y = H * (d.short ? 0.2 : 0.3) + stack;
+      v.text(m.text, W / 2, y, s, m.color, 0.5, fade * (m.kind === 'big' ? 0.92 : 0.85), m.kind === 'big' ? 1.1 : 1);
       stack += s + 12;
     }
     if (this.hint) {

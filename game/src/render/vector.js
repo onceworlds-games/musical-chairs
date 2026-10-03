@@ -199,6 +199,22 @@ export class Vector {
     return w;
   }
 
+  /** Breaks a label into lines no wider than maxW (words stay whole; a word wider than the line is kept). */
+  lines(str, size, maxW) {
+    const words = String(str).split(/\s+/).filter(Boolean);
+    const out = [];
+    let line = '';
+    for (const w of words) {
+      const next = line ? `${line} ${w}` : w;
+      if (line && this.measure(next, size) > maxW) {
+        out.push(line);
+        line = w;
+      } else line = next;
+    }
+    if (line) out.push(line);
+    return out;
+  }
+
   measure(str, size) {
     const u = size / 6;
     return measureRaw(String(str).toUpperCase(), 5 * u + size * 0.06, u);

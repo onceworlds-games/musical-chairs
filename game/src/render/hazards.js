@@ -143,8 +143,8 @@ export const hazardMethods = {
         v.to(tmpA[0], tmpA[1]);
       }
       // The star.
-      const vx = this.cx + this.vp[0] * this.S;
-      const vy = this.cy + this.vp[1] * this.S;
+      const vx = this.vx();
+      const vy = this.vy();
       const r = this.S * 0.12 * (0.6 + 0.4 * enter);
       const rot = scene.calm ? 0 : t * 0.6;
       const open = boss.kind !== 'conductor' || w.tick % TICKS_PER_BAR >= 8;
