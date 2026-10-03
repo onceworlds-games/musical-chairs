@@ -274,7 +274,7 @@ export const SHIP_UNLOCKS = {
 // ------------------------------------------------------------------ mods
 // max: how many times it stacks. coop: offered only when others play. Every effect lives in world.js.
 export const MODS = [
-  { key: 'pierce', name: 'PIERCE', max: 2, tag: 'BOLTS PASS THROUGH' },
+  { key: 'pierce', name: 'PIERCE', max: 1, tag: 'BOLTS PASS THROUGH ONE' },
   { key: 'spread', name: 'SPREAD', max: 2, tag: 'SIDE LANES TOO' },
   { key: 'echo', name: 'ECHO', max: 2, tag: 'REPEAT NEXT BEAT' },
   { key: 'ricochet', name: 'RICOCHET', max: 1, tag: 'BOUNCE OFF THE FAR END' },
@@ -292,7 +292,7 @@ export const MODS = [
   { key: 'bassdrop', name: 'BASS DROP', max: 2, tag: 'KILLS RECHARGE ZAP' },
   { key: 'forte', name: 'FORTE', max: 2, tag: 'WIDER ZAP' },
   { key: 'shieldbeat', name: 'SHIELD BEAT', max: 2, tag: 'A SHIELD NOW AND THEN' },
-  { key: 'encore', name: 'ENCORE', max: 1, tag: 'A SHIP, SLOWER RESONANCE' },
+  { key: 'encore', name: 'ENCORE', max: 1, tag: 'A SHIP, A SLOWER HOP' },
   { key: 'undertow', name: 'UNDERTOW', max: 2, tag: 'SLOW THE NEAR END' },
   { key: 'rimguard', name: 'RIM GUARD', max: 1, tag: 'A SPARK EVERY 2 BARS' },
   { key: 'resonator', name: 'RESONATOR', max: 2, tag: 'FASTER RESONANCE' },

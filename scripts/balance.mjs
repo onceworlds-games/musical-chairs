@@ -1,6 +1,6 @@
 // The balance harness: bot ships of three skills fly the pure simulation across seeds and print the numbers the
 // design is held to (see README "Balance"). `npm run balance` (all sections), `node scripts/balance.mjs quick`,
-// or name sections: `node scripts/balance.mjs survival mods ships`.
+// or name sections: `node scripts/balance.mjs survival mods ships` (mods: `only=pierce,echo` and `n=400` narrow and size it).
 import { playRun } from '../game/src/sim/headless.js';
 import { draftOptions, addMod } from '../game/src/sim/run.js';
 import { botPick } from '../game/src/sim/bot.js';
@@ -10,7 +10,8 @@ import { MODS, SHIPS } from '../game/src/sim/data.js';
 const args = process.argv.slice(2);
 const quick = args.includes('quick');
 const onlyMods = (args.find((a) => a.startsWith('only=')) || '').slice(5).split(',').filter(Boolean);
-const want = args.filter((a) => a !== 'quick' && !a.startsWith('only='));
+const sized = Number((args.find((a) => a.startsWith('n=')) || '').slice(2)) || 0;
+const want = args.filter((a) => a !== 'quick' && !a.startsWith('only=') && !a.startsWith('n='));
 const on = (name) => !want.length || want.includes(name);
 const N = quick ? 60 : 300;
 const pct = (x) => `${(100 * x).toFixed(0)}%`.padStart(5);
@@ -83,7 +84,7 @@ if (on('final')) {
 // The baseline is a good build without the mod (the smart bot's picks over every draft, that mod refused); the test
 // gives the same build the mod at its full stack. Pairs take the strongest singles two at a time.
 if (on('mods')) {
-  const n = quick ? 60 : 160;
+  const n = sized || (quick ? 60 : 160);
   const rate = (skip, extra) => {
     let wins = 0;
     for (let i = 0; i < n; i++) {

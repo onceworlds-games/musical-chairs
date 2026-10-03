@@ -386,9 +386,7 @@ export class World {
     // Resonance and Overdrive.
     if (!od) {
       const rz = Math.max(0, ...this.ships.map((s) => mod(s, 'resonator')));
-      // Encore's price: a ship now, Resonance a quarter slower for the rest of the run.
-      const encore = this.ships.some((s) => mod(s, 'encore')) ? 0.75 : 1;
-      this.addRes(def.res * (1 + 0.2 * rz) * encore);
+      this.addRes(def.res * (1 + 0.2 * rz));
     } else {
       const fb = this.ships.some((s) => mod(s, 'feedback'));
       if (fb && this.odExtended < 6 / this.dt) {

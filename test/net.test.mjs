@@ -9,7 +9,7 @@ import { makeBoss } from '../game/src/sim/bosses.js';
 import { zoneFor } from '../game/src/sim/run.js';
 import { encode, clean, apply, batch, readBatch } from '../game/src/net/sync.js';
 import { cleanHub, cleanRun } from '../game/src/net/session.js';
-import { STEPS_PER_BAR } from '../game/src/sim/data.js';
+import { STEPS_PER_BAR, MODS } from '../game/src/sim/data.js';
 
 const players = [
   { id: 'a', ship: 0, mods: { pierce: 1 }, kind: 'driven' },
@@ -130,7 +130,7 @@ test('run records and hub settings from room state are checked', () => {
   assert.equal(r.score, 99_999_999);
   assert.deepEqual(r.roster, ['a']);
   assert.equal(r.players.a.ship, 5);
-  assert.deepEqual(r.players.a.mods, { pierce: 2 });
+  assert.deepEqual(r.players.a.mods, { pierce: MODS.find((m) => m.key === 'pierce').max });
   assert.equal(r.players.a.kills, 0);
   assert.equal(Object.keys(r.players).length, 1);
   assert.equal(r.result.cleared, false);

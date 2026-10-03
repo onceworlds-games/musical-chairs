@@ -65,7 +65,8 @@ export const shipMethods = {
   hop(ship) {
     const from = laneOf(this.web, ship.u);
     const gn = mod(ship, 'gracenote');
-    ship.hopCd = this.step + (gn >= 2 ? (STEPS_PER_BEAT * 3) / 4 : STEPS_PER_BEAT);
+    // Encore's price: a hop every two beats.
+    ship.hopCd = this.step + (gn >= 2 ? (STEPS_PER_BEAT * 3) / 4 : STEPS_PER_BEAT) * (mod(ship, 'encore') ? 2 : 1);
     let to = from + ship.dir * SHIP.hopLanes;
     if (!this.web.closed) to = Math.max(0, Math.min(this.n - 1, to));
     ship.u = wrapU(this.web, to);
@@ -178,7 +179,7 @@ export const shipMethods = {
     let speed = def.speed * (1 + 0.25 * mod(ship, 'staccato'));
     const met = mod(ship, 'metronome');
     const syn = mod(ship, 'syncopate');
-    if (met && onBeat) dmg += met >= 2 ? 1 : 0.6;
+    if (met && onBeat) dmg += met >= 2 ? 0.7 : 0.5;
     if (syn && offBeat) (dmg += syn >= 2 ? 0.75 : 0.5), (speed *= 1.25);
     const opts = { dmg, pierce, speed, kind: 0, range: def.range };
     if (def.tines) {
@@ -199,7 +200,7 @@ export const shipMethods = {
       // Short side bolts: they guard the neighbouring lanes near the rim.
       for (const side of [-1, 1]) {
         const l = neighbour(this.web, lane, side);
-        if (l >= 0) this.spawnBolt(ship, l, { ...opts, dmg: dmg * 0.4, pierce: 0, kind: 1, range: 0.45 });
+        if (l >= 0) this.spawnBolt(ship, l, { ...opts, dmg: dmg * 0.35, pierce: 0, kind: 1, range: 0.35 });
       }
     }
     if (mod(ship, 'counterpoint')) this.spawnBolt(ship, opposite(this.web, lane), { ...opts, dmg: dmg * 0.3, pierce: 0, kind: 3 });
@@ -304,6 +305,8 @@ export const shipMethods = {
       this.boltHits(b, best);
       if (b.pierce > 0) {
         b.pierce--;
+        // A bolt that passes through loses a quarter of its bite; beams (bow, sustain) keep it.
+        if (b.pierce < 50) b.dmg *= 0.75;
         lo = best.z;
         continue;
       }
