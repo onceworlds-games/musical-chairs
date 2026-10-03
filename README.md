@@ -101,20 +101,36 @@ To play with the platform's rooms, deploy the folder to a local Onceworlds with 
 ## Balance
 
 `scripts/balance.mjs` flies bot ships of three skills (they react, notice and aim like a novice, an average and an
-expert player) through the simulation with random drafts. Last run (300 runs per row):
+expert player, and fly to a fallen friend when they have one) through the simulation with random drafts. Last run (300
+runs per row):
 
 | | novice | average | expert |
 | --- | --- | --- | --- |
 | Clears zone 1-1 | 99% | 100% | 100% |
-| Clears world 3 | 2% | 86% | 98% |
-| Beats the Maestro with a good build | 0% | 5% | 41% |
-| Mean run length | 7 min | 18 min | 22 min |
+| Clears world 3 | 4% | 85% | 98% |
+| Beats the Maestro with a good build | 0% | 3% | 42% |
+| Clears a whole run with random drafts | 0% | 1% | 24% |
+| Mean run length | 7 min | 19 min | 22 min |
 
-Top-decile score over the median: 3.3x, 2.5x and 1.6x. Every ship clears world 4 with its own best build within
-eight points of the others (59-67% for the average bot). No mod at its full stack adds more than 15 points to the
-expert's Maestro clear rate (the strongest: Grace Note +15 and Spread +13, over 600 runs) and no pair more than 28.
-In the Descent the average bot reaches depth 10 in 11 minutes. In company the run is kinder: two average bots beat
-the Maestro 34% of the time, four 93% (Overclock is the dial for a group that wants more).
+Top-decile score over the median: 3.5x, 2.9x and 1.5x. Every ship clears world 4 with its own best build within twelve
+points of the others (72-84% for the average bot). No mod at its full stack adds more than 13 points to the expert's
+Maestro clear rate (Shield Beat; Magnet +11, Drone +7, Metronome +7, Pierce +6, Echo and Grace Note +5, 160 to 320 runs
+each) and no pair of the strongest more than 25 (Shield Beat with Bass Drop). In the Descent the average bot reaches
+depth 10 in 11 minutes.
+
+A crew is held to a harder game than a pilot alone: a denser score, enemies that take 25% (two), 70% (three) or 135%
+(four) more hitting, Resonance that fills more slowly per kill, bosses with more life, and every fall costs a ship that
+a rescue gives back only in part. Runs cleared with random drafts by average bots (100 runs each; Overclock is the dial):
+
+| ships | Overclock 0 | 3 | 6 |
+| --- | --- | --- | --- |
+| 1 | 1% | 0% | 0% |
+| 2 | 15% | 5% | 3% |
+| 3 | 32% | 27% | 20% |
+| 4 | 21% | 25% | 11% |
+
+(The first rows are noisy at this size: 4 ships and 3 ships are within a run's luck of each other. Before, two ships
+cleared 34% and four 93%.)
 
 ## Badges and boards
 
