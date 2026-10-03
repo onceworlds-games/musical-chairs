@@ -145,11 +145,19 @@ if (on('descent')) {
   row('DESCENT (average)', `depth ${depth.toFixed(1)}`, `${mins.toFixed(1)} min`);
 }
 if (on('coop')) {
-  for (const players of [2, 4]) {
-    const rs = runs(quick ? 40 : 120, { skill: 'average', ships: new Array(players).fill(0).map((_, i) => i % SHIPS.length), picks: 'random', tag: `coop${players}` });
-    const w3 = rs.filter((r) => r.depth >= 12).length / rs.length;
-    const fin = rs.filter((r) => r.cleared).length / rs.length;
-    row(`CO-OP ${players} (average)`, `W3 ${pct(w3)}`, `final ${pct(fin)}`);
+  // Groups of average bots (they fly to a fallen friend, as people do), random drafts, at three Overclock rungs.
+  const n = sized || (quick ? 40 : 120);
+  const rungs = [0, 3, 6];
+  row('CO-OP (average, run clear)', ...rungs.map((oc) => `OC ${oc}`), 'W3 at OC 0');
+  for (const players of [1, 2, 3, 4]) {
+    const cells = [];
+    let w3 = 0;
+    for (const oc of rungs) {
+      const rs = runs(n, { skill: 'average', ships: new Array(players).fill(0).map((_, i) => i % SHIPS.length), picks: 'random', oc, tag: `coop${players}.${oc}` });
+      if (oc === 0) w3 = rs.filter((r) => r.depth >= 12).length / rs.length;
+      cells.push(pct(rs.filter((r) => r.cleared).length / rs.length));
+    }
+    row(`  ${players} ship${players > 1 ? 's' : ''}`, ...cells, pct(w3));
   }
 }
 

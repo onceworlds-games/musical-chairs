@@ -79,7 +79,7 @@ test('hostile snapshots are rejected or clamped', () => {
   assert.equal(c.sc, 0);
   assert.equal(c.mu, 12);
   assert.equal(c.re, 100);
-  assert.equal(c.lv, 9);
+  assert.equal(c.lv, 12);
   assert.deepEqual(c.sp, [0.86, 0, 0]);
   assert.deepEqual(c.sh, []);
   assert.deepEqual(c.ev, []);
@@ -129,7 +129,7 @@ test('run records and hub settings from room state are checked', () => {
   assert.equal(r.oc, 8);
   assert.equal(r.idx, 0);
   assert.equal(r.status, 'over');
-  assert.ok(r.lives <= 8);
+  assert.ok(r.lives <= 12);
   assert.equal(r.score, 99_999_999);
   assert.deepEqual(r.roster, ['a']);
   assert.equal(r.players.a.ship, 5);

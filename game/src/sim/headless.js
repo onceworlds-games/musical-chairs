@@ -4,7 +4,7 @@ import { World, PHASE } from './world.js';
 import { Bot, botPick } from './bot.js';
 import { zoneFor, zoneCount, draftOptions, addMod } from './run.js';
 import { Rng, hash32 } from './rng.js';
-import { SHIP, STEPS_PER_BAR } from './data.js';
+import { SHIP, STEPS_PER_BAR, startLives } from './data.js';
 
 /**
  * opts: { mode: 'run' | 'descent' | 'daily', seed, skill, ships: [index...] (one per bot), oc, picks: 'random' | 'smart' | 'none',
@@ -18,7 +18,7 @@ export function playRun(opts = {}) {
   const bots = shipTypes.map((_, i) => new Bot(opts.skills?.[i] || opts.skill || 'average', hash32(run.seed, i)));
   const pickRng = new Rng(hash32(run.seed, 'picks'));
   let mods = shipTypes.map((_, i) => ({ ...(opts.mods?.[i] || {}) }));
-  let carry = { lives: opts.lives ?? (run.oc >= 6 ? 2 : SHIP.lives), score: 0, mult: 1, res: 0 };
+  let carry = { lives: opts.lives ?? startLives(run.oc, shipTypes.length), score: 0, mult: 1, res: 0 };
   for (const m of mods) if (m.encore) carry.lives = Math.min(SHIP.maxLives + 2, carry.lives + m.encore);
   const total = Math.min(zoneCount(run), opts.maxZones ?? 200);
   const from = opts.from || 0;

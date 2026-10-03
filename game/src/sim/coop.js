@@ -1,7 +1,7 @@
 // Company and pickups, mixed into World: revives, tethers between neighbours, choirs that must fall together, and
 // the notes that climb from a kill to whoever catches them. Methods run with `this` as the World.
 import { laneOf, laneDelta } from './web.js';
-import { E, PICKUPS, SHIP, STEPS_PER_BAR, STEPS_PER_BEAT, CHOIR_BONUS } from './data.js';
+import { E, PICKUPS, SHIP, STEPS_PER_BAR, STEPS_PER_BEAT, CHOIR_BONUS, REVIVE_REFUND } from './data.js';
 import { spawnEnemy } from './enemies.js';
 import { mod } from './world-shared.js';
 
@@ -23,16 +23,23 @@ export const coopMethods = {
           ship.u = w.lane;
           ship.inv = this.step + STEPS_PER_BEAT * 2;
           this.event('revive', ship.idx, w.lane, 0, saver.idx);
+          // A rescue gives back part of the ship the fall cost: two of them make one.
+          this.rescueCredit = (this.rescueCredit || 0) + REVIVE_REFUND;
+          if (this.rescueCredit >= 0.999 && this.lives < this.maxLives) {
+            this.rescueCredit -= 1;
+            this.lives++;
+            this.event('lives', ship.idx, 0, 0, this.lives);
+          }
         } else if (this.step >= w.until && ship.state === 'down') {
           w.done = true;
-          this.loseLife(ship);
+          this.wreckExpired(ship);
         }
       }
       this.wrecks = this.wrecks.filter((w) => !w.done);
       if (!live.length) this.checkOver();
     }
     // Tethers: a burning line between ships within three lanes of each other.
-    if (live.length < 2) return;
+    if (live.length < 2 || false) return;
     for (let i = 0; i < live.length; i++) {
       for (let j = i + 1; j < live.length; j++) {
         const a = live[i];
@@ -136,7 +143,7 @@ export const coopMethods = {
   collect(ship, p) {
     if (p.kind === PICKUPS.ZAP) ship.zaps = Math.min(2, ship.zaps + 1);
     else if (p.kind === PICKUPS.LIFE) {
-      if (this.lives < SHIP.maxLives) this.lives++;
+      if (this.lives < this.maxLives) this.lives++;
       else this.addScore(5000, ship.idx);
     } else this.addRes(25);
     this.event('pickup', ship.idx, p.lane, 0, p.kind);

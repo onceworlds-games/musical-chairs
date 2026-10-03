@@ -7,7 +7,7 @@ import { Rng, hash32 } from '../game/src/sim/rng.js';
 import { makeWeb, SHAPES, laneDelta, laneOf, wrapU, opposite } from '../game/src/sim/web.js';
 import { buildZone, validateZone } from '../game/src/sim/levelgen.js';
 import { zoneFor, draftOptions, cleanMods, dailyFor, zoneCount, addMod } from '../game/src/sim/run.js';
-import { E, MODS, SHIPS, WORLDS, STEPS_PER_BAR, STEPS_PER_BEAT, descentRamp } from '../game/src/sim/data.js';
+import { E, MODS, SHIPS, WORLDS, STEPS_PER_BAR, STEPS_PER_BEAT, descentRamp, startLives, maxLivesFor } from '../game/src/sim/data.js';
 import { spawnEnemy, S } from '../game/src/sim/enemies.js';
 import { playRun } from '../game/src/sim/headless.js';
 
@@ -271,8 +271,8 @@ test('practice: falling costs no ship', () => {
   assert.equal(ship.state, 'live');
 });
 
-test('co-op: a wreck is revived by a touch; tethers burn crawlers between ships', () => {
-  const w = new World({ zone: zone(), players: [{ id: 'a', ship: 0 }, { id: 'b', ship: 0 }] });
+test('co-op: every fall costs a ship, a rescue gives most of it back; tethers burn crawlers between ships', () => {
+  const w = new World({ zone: zone(), players: [{ id: 'a', ship: 0 }, { id: 'b', ship: 0 }], carry: { lives: 5 } });
   w.spawns = [];
   stepTo(w, PHASE.PLAY);
   const [a, b] = w.ships;
@@ -281,11 +281,24 @@ test('co-op: a wreck is revived by a touch; tethers burn crawlers between ships'
   b.u = 4;
   w.down(a, 1);
   assert.equal(a.state, 'down');
-  assert.equal(w.lives, 3, 'no ship lost yet');
+  assert.equal(w.lives, 4, 'the fall cost a ship');
   b.in.target = 2;
   for (let i = 0; i < STEPS_PER_BEAT && a.state !== 'live'; i++) w.update();
   assert.equal(a.state, 'live', 'revived');
-  assert.equal(w.lives, 3);
+  assert.equal(w.lives, 4, 'four rescues in five pay for one ship: not yet');
+  // The fifth rescue (0.8 each) completes a ship.
+  for (let k = 0; k < 4; k++) {
+    a.inv = 0;
+    a.state = 'live';
+    a.u = 2;
+    b.u = 2;
+    w.down(a, 1);
+    b.u = 2;
+    b.in.target = 2;
+    for (let i = 0; i < STEPS_PER_BEAT && a.state !== 'live'; i++) w.update();
+    assert.equal(a.state, 'live');
+  }
+  assert.equal(w.lives, 4, 'five falls cost five ships and five rescues gave four back');
   // Tether: a crawler between them burns.
   a.u = 2;
   b.u = 5;
@@ -299,8 +312,25 @@ test('co-op: a wreck is revived by a touch; tethers burn crawlers between ships'
   assert.ok(w.stats.tether >= 1);
 });
 
-test('co-op: an unrevived wreck costs a ship after two bars', () => {
-  const w = new World({ zone: zone(), players: [{ id: 'a', ship: 0 }, { id: 'b', ship: 0 }] });
+test('co-op: with no ships left a fall is final, and nobody can be revived', () => {
+  const w = new World({ zone: zone(), players: [{ id: 'a', ship: 0 }, { id: 'b', ship: 0 }], carry: { lives: 0 } });
+  w.spawns = [];
+  stepTo(w, PHASE.PLAY);
+  const [a, b] = w.ships;
+  a.inv = 0;
+  a.u = 0;
+  b.u = 8;
+  w.down(a, 1);
+  assert.equal(a.state, 'out');
+  assert.equal(w.wrecks.length, 0);
+  assert.notEqual(w.phase, PHASE.OVER, 'the other ship flies on');
+  b.inv = 0;
+  w.down(b, 1);
+  assert.equal(w.phase, PHASE.OVER);
+});
+
+test('co-op: an unrevived wreck flies again on the next bar without a second charge', () => {
+  const w = new World({ zone: zone(), players: [{ id: 'a', ship: 0 }, { id: 'b', ship: 0 }], carry: { lives: 4 } });
   w.spawns = [];
   stepTo(w, PHASE.PLAY);
   const [a, b] = w.ships;
@@ -309,8 +339,22 @@ test('co-op: an unrevived wreck costs a ship after two bars', () => {
   b.u = 8;
   b.in.target = 8;
   w.down(a, 1);
-  for (let i = 0; i < STEPS_PER_BAR * 3; i++) w.update();
-  assert.equal(w.lives, 2);
+  assert.equal(w.lives, 3);
+  for (let i = 0; i < STEPS_PER_BAR * 4; i++) w.update();
+  assert.equal(w.lives, 3, 'charged once, at the fall');
+  assert.equal(a.state, 'live');
+});
+
+test('a crew meets a denser score, tougher enemies, and shares more ships', () => {
+  const one = new World({ zone: zoneFor({ mode: 'run', seed: 3 }, 14), players: [{ id: 'a', ship: 0 }] });
+  const four = new World({ zone: zoneFor({ mode: 'run', seed: 3 }, 14), players: [0, 1, 2, 3].map((i) => ({ id: `p${i}`, ship: i })) });
+  assert.ok(four.spawns.length > one.spawns.length * 1.8, `a crew of four faces ${four.spawns.length} against ${one.spawns.length}`);
+  assert.ok(four.tough > one.tough * 2);
+  assert.ok(four.resShare < one.resShare);
+  assert.ok(startLives(0, 4) > startLives(0, 1));
+  assert.equal(startLives(0, 1), 3);
+  assert.equal(startLives(6, 1), 2);
+  assert.ok(startLives(0, 4) <= maxLivesFor(4));
 });
 
 test('the run ends when the last ship falls with no lives left', () => {

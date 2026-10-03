@@ -28,6 +28,10 @@ import {
   OVERDRIVE_SECONDS,
   MULT_CAP,
   OC_BPM,
+  CROWD_RESONANCE,
+  CROWD_TOUGH,
+  maxLivesFor,
+  CROWD_TOUGH2,
   stepSeconds,
   descentRamp,
 } from './data.js';
@@ -63,6 +67,9 @@ export class World {
     this.shotChance = zone.guided || first ? 0 : Math.min(0.35, ((ramp ? ramp.shots : world.shots) || 0) * (this.oc >= 2 ? 1.8 : 1) * (zone.level >= 3 ? 1.2 : 1));
     // Deeper worlds' enemies take more hitting (fractions matter: 1.25 needs two plain bolts, or one heavy one).
     this.tough = ramp ? ramp.tough : (world.tough || 1) + 0.03 * Math.max(0, zone.depth || 0);
+    // A crew meets tougher, quicker things: more ships, more hits to bring each one down.
+    const extra = Math.max(0, Math.min(3, players.length - 1));
+    this.tough *= 1 + CROWD_TOUGH * extra + CROWD_TOUGH2 * extra * (extra - 1);
     this.rng = new Rng(hash32('sim', zone.seed, zone.world, zone.level, zone.depth || 0));
     this.hrng = new Rng(hash32('host', zone.seed, zone.world, zone.level, zone.depth || 0)); // the host's alone: pickups, its own spawns
     zone.n = this.n;
@@ -119,6 +126,9 @@ export class World {
     this.killsTotal = 0;
     // Ships.
     this.ships = players.map((p, i) => this.makeShip(p, i, carry));
+    // Every ship's kills fill the one Resonance meter: with company it fills a little slower per kill.
+    this.resShare = 1 / (1 + CROWD_RESONANCE * (this.ships.length - 1));
+    this.maxLives = maxLivesFor(this.ships.length);
     this.undertow = Math.max(0, ...this.ships.map((s) => mod(s, 'undertow')));
     this.wrecks = [];
   }
@@ -498,7 +508,7 @@ export class World {
 
   addRes(amount) {
     if (!this.auth || this.overdrive) return;
-    this.res = Math.min(RESONANCE_MAX, this.res + amount);
+    this.res = Math.min(RESONANCE_MAX, this.res + amount * this.resShare);
     if (this.res >= RESONANCE_MAX) {
       const ot = Math.max(0, ...this.ships.map((s) => mod(s, 'overtone')));
       this.odUntil = this.step + Math.round((OVERDRIVE_SECONDS * (1 + 0.25 * ot)) / this.dt);
@@ -618,7 +628,7 @@ export class World {
       const bonus = ZONE_POINTS * ((this.zone.world % 6) + 1) * lvl + (flawless ? FLAWLESS_POINTS * ((this.zone.world % 6) + 1) : 0);
       this.addScore(bonus, -1);
       if (flawless) this.event('flawless', 0, 0, 0, FLAWLESS_POINTS * ((this.zone.world % 6) + 1));
-      if (this.zone.level >= 4 && this.lives < SHIP.maxLives) {
+      if (this.zone.level >= 4 && this.lives < this.maxLives) {
         // A world cleared: one more ship.
         this.lives++;
         this.event('life', 0, 0, 0, this.lives);

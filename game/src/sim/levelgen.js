@@ -11,6 +11,14 @@ const PHRASES = [
   [0.6, 1.4, 0.5, 1.5, 0.6, 1.5, 1, 1.9],
   [0.8, 0.8, 1.6, 0.4, 1, 1, 1.8, 1.6],
 ];
+// Where in a bar something may arrive: [quiet bar, rushing bar] for one ship, two, and three or four.
+const EIGHTHS = [0, 2, 4, 6, 8, 10, 12, 14];
+const SIXTEENTHS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+const TICKS = [
+  [[0, 4, 8, 12], EIGHTHS],
+  [EIGHTHS, EIGHTHS.concat([1, 5, 9, 13]).sort((a, b) => a - b)],
+  [EIGHTHS, SIXTEENTHS],
+];
 const LEVEL_MUL = [1, 1.14, 1.28, 0.55];
 const STANZA_MUL = [0.8, 1, 1.22];
 
@@ -54,6 +62,7 @@ export function buildZone(zone) {
     spawns.push({ tick: t, type, lane, group });
   };
   const pool = poolFor(zone);
+  const crowd = Math.max(1, Math.min(4, zone.crowd || 1));
   const boss = zone.level >= 4;
   const stanzas = boss ? Math.ceil(BOSS_BARS / STANZA_BARS) : STANZAS;
   let groupId = 1;
@@ -83,10 +92,11 @@ export function buildZone(zone) {
       if (boss && b === 0 && s === 0) continue; // the boss takes the stage alone
       let money = (budget * phrase[b]) / sum + carry;
       const rush = phrase[b] >= 1.5;
-      const ticks = rush ? [0, 2, 4, 6, 8, 10, 12, 14] : [0, 4, 8, 12];
+      // A crew gets a denser score: more places in the bar to put things, or its larger budget would have nowhere to go.
+      const ticks = TICKS[Math.min(2, crowd - 1)][rush ? 1 : 0];
       let slot = 0;
       let guard = 0;
-      while (money > 1.5 && guard++ < 12) {
+      while (money > 1.5 && guard++ < 12 + 8 * (crowd - 1)) {
         const tick = bar * TICKS_PER_BAR + ticks[Math.min(ticks.length - 1, slot)];
         const motif = rng.next();
         const affordable = pool.filter(([type]) => ENEMIES[type].cost <= money);

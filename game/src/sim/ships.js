@@ -1,7 +1,7 @@
 // The ships' side of a zone, mixed into World: moving round the rim, firing on the grid, bolts and what they hit,
 // hops and zaps, getting caught, coming back. Methods run with `this` as the World.
 import { laneOf, wrapU, laneDelta, laneDist, opposite, neighbour } from './web.js';
-import { E, SHIP, STEPS_PER_TICK, STEPS_PER_BEAT, STEPS_PER_BAR, WARP_BARS } from './data.js';
+import { E, SHIP, STEPS_PER_TICK, STEPS_PER_BEAT, STEPS_PER_BAR, WARP_BARS, REVIVE_BARS } from './data.js';
 import { hitLane, contactLane, rimDanger, S } from './enemies.js';
 import { bossDamage } from './bosses.js';
 import { PHASE, DEATH, mod } from './world-shared.js';
@@ -428,8 +428,17 @@ export const shipMethods = {
     }
     const othersLive = this.ships.some((s) => s !== ship && s.state === 'live');
     if (othersLive) {
-      // Someone can still reach the wreck: it waits two bars (for good once the lives are gone).
-      this.wrecks.push({ idx: ship.idx, lane: laneOf(this.web, ship.u), until: this.lives > 0 ? this.step + STEPS_PER_BAR * 2 : Infinity });
+      // Company: every fall costs a ship from the shared pool, and a mate who reaches the wreck in time gets half of it
+      // back. With no ships left a fall is final.
+      if (this.lives <= 0) {
+        ship.state = 'out';
+        this.event('lives', ship.idx, 0, 0, 0);
+        this.checkOver();
+        return;
+      }
+      this.lives--;
+      this.event('lives', ship.idx, 0, 0, this.lives);
+      this.wrecks.push({ idx: ship.idx, lane: laneOf(this.web, ship.u), until: this.step + Math.round(STEPS_PER_BAR * REVIVE_BARS) });
       return;
     }
     this.loseLife(ship);
@@ -443,8 +452,16 @@ export const shipMethods = {
       ship.respawnAt = this.nextBarStep(STEPS_PER_BEAT);
     } else {
       ship.state = 'out';
-      for (const w of this.wrecks) w.until = Infinity;
     }
+    this.checkOver();
+  },
+
+  /** A wreck nobody reached: its ship (already paid for) flies again on the next bar, or is gone with the last of them. */
+  wreckExpired(ship) {
+    if (this.lives > 0) {
+      ship.state = 'wait';
+      ship.respawnAt = this.nextBarStep(STEPS_PER_BEAT);
+    } else ship.state = 'out';
     this.checkOver();
   },
 

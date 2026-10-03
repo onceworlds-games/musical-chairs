@@ -6,7 +6,7 @@
 //   TIDE       water rises up half the web each bar and breaks on beat 4; the core hides in the dry half
 //   MIRROR     sits across from you a beat behind and fires down its lane; later it follows you instead
 //   MAESTRO    all of it, phase by phase
-import { E, BOSSES, STEPS_PER_TICK, STEPS_PER_BEAT, STEPS_PER_BAR, TICKS_PER_BAR, BOSS_BARS } from './data.js';
+import { E, BOSSES, CROWD_BOSS, STEPS_PER_TICK, STEPS_PER_BEAT, STEPS_PER_BAR, TICKS_PER_BAR, BOSS_BARS } from './data.js';
 import { spawnEnemy, nearestShip, S } from './enemies.js';
 import { laneOf, wrapU, laneDelta, laneDist, opposite } from './web.js';
 
@@ -17,7 +17,7 @@ export function makeBoss(w, kind, bare = false) {
   const def = BOSSES[kind] ?? BOSSES.hydra;
   const players = Math.max(1, w.ships.length);
   const dps = w.bpm / 15; // a Plectrum's bolts per second at this tempo
-  const hp = Math.round(def.secs * dps * (1 + 0.1 * w.oc) * (1 + 0.85 * (players - 1)) * (w.zone.depth ? 1 + 0.05 * w.zone.depth : 1));
+  const hp = Math.round(def.secs * dps * (1 + 0.1 * w.oc) * (1 + CROWD_BOSS * (players - 1)) * (w.zone.depth ? 1 + 0.05 * w.zone.depth : 1));
   const boss = {
     kind,
     name: def.name,
@@ -344,12 +344,14 @@ function patternLanes(w, boss, pattern, bar) {
       break;
     }
     case 'around': {
-      // Right where a ship is: move three lanes, or hop.
-      const t = nearestShip(w, w.web.start);
-      const c = t ? laneOf(w.web, t.ship.u) : w.web.start;
-      for (let d = -2; d <= 2; d++) {
-        const l = c + d;
-        if (w.web.closed || (l >= 0 && l < n)) out.push(((l % n) + n) % n);
+      // Right where a ship is: move three lanes, or hop. With company, right where each of them is.
+      const centres = w.ships.filter((x) => x.state === 'live').map((x) => laneOf(w.web, x.u));
+      if (!centres.length) centres.push(w.web.start);
+      for (const c of centres) {
+        for (let d = -2; d <= 2; d++) {
+          const l = c + d;
+          if (w.web.closed || (l >= 0 && l < n)) out.push(((l % n) + n) % n);
+        }
       }
       break;
     }

@@ -9,9 +9,9 @@ import { PHASE } from './world.js';
 import { partOpen, ROLE } from './bosses.js';
 
 export const SKILLS = {
-  novice: { react: 26, aware: 0.5, noise: 0.16, hop: 0.15, zapAt: 6, zapWill: 0.5, fire: 0.85, spikes: 0, beatHop: 0, lookShots: 0.5 },
-  average: { react: 18, aware: 0.84, noise: 0.06, hop: 0.6, zapAt: 4, zapWill: 0.85, fire: 0.97, spikes: 0.5, beatHop: 0.1, lookShots: 0.85 },
-  expert: { react: 12, aware: 0.98, noise: 0.01, hop: 0.95, zapAt: 3, zapWill: 1, fire: 1, spikes: 1, beatHop: 0.5, lookShots: 1 },
+  novice: { react: 26, aware: 0.5, noise: 0.16, hop: 0.15, zapAt: 6, zapWill: 0.5, fire: 0.85, spikes: 0, beatHop: 0, lookShots: 0.5, revive: 0.2 },
+  average: { react: 18, aware: 0.84, noise: 0.06, hop: 0.6, zapAt: 4, zapWill: 0.85, fire: 0.97, spikes: 0.5, beatHop: 0.1, lookShots: 0.85, revive: 0.5 },
+  expert: { react: 12, aware: 0.98, noise: 0.01, hop: 0.95, zapAt: 3, zapWill: 1, fire: 1, spikes: 1, beatHop: 0.5, lookShots: 1, revive: 0.65 },
 };
 
 export class Bot {
@@ -120,6 +120,11 @@ export class Bot {
     const spikeWeight = warp ? 3 : w.phase === PHASE.VAMP ? 0.6 * k.spikes : 0.15 * k.spikes;
     for (let l = 0; l < n; l++) if (w.spikes[l] > 0.05) value[l] += w.spikes[l] * spikeWeight;
     if (warp) for (let l = 0; l < n; l++) danger[l] += w.spikes[l] > 0.02 ? w.spikes[l] * 14 : 0;
+
+    // A fallen friend waits for a touch: worth the trip while the lane is not deadly (people do this; so do the bots).
+    for (const wr of w.wrecks) {
+      if (wr.idx !== ship.idx && this.rng.next() < k.revive) value[wrapLane(w, wr.lane)] += 2.6;
+    }
 
     // A ship covers the lanes its bolts go down: a Mallet three, a Fork the two beside it.
     const cover = ship.def.tines ? [-1, 1] : ship.def.spread ? [-1, 0, 1] : [0];

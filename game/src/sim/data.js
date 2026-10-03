@@ -77,6 +77,17 @@ export const RESONANCE_MAX = 100;
 export const OVERDRIVE_SECONDS = 10;
 export const MULT_CAP = 8;
 
+/** The most ships a team can hold: six for one pilot, one more for each friend. */
+const CREW_MAX = [6, 8, 8, 8];
+export const maxLivesFor = (crew = 1) => CREW_MAX[Math.max(1, Math.min(4, crew)) - 1];
+
+/** The ships a run starts with: three alone, a few more for a crew (the pool is shared), one fewer at Overclock 6. */
+const CREW_SHIPS = [3, 5, 6, 7];
+export function startLives(oc, crew = 1) {
+  const base = CREW_SHIPS[Math.max(1, Math.min(4, crew)) - 1] - (oc >= 6 ? 1 : 0);
+  return Math.min(maxLivesFor(crew), base);
+}
+
 /** Pickups: they climb from a kill to the rim; a ship in that lane catches them. */
 export const PICKUPS = {
   ZAP: 1,
@@ -336,4 +347,10 @@ export const OVERCLOCK = [
 ];
 export const OC_BPM = 2; // per rung
 export const OC_BUDGET = 0.07; // per rung
-export const CROWD_BUDGET = 0.6; // more threat per extra ship in the zone
+export const CROWD_BUDGET = 1; // more threat per extra ship in the zone (as much again: a crew is as strong as its ships)
+export const CROWD_RESONANCE = 0.5; // shared Resonance fills this much slower per extra ship's kills (Overdrive is shared)
+export const CROWD_TOUGH = 0.25; // plain enemies take this much more hitting per extra ship...
+export const CROWD_TOUGH2 = 0.1; // ...and this much more again for each pair of friends (two ships: x1.25, three: x1.7, four: x2.35)
+export const CROWD_BOSS = 0.85; // a boss has this much more life per extra ship
+export const REVIVE_REFUND = 0.8; // a rescue gives back this much of the ship its fall cost (five rescues pay for four ships)
+export const REVIVE_BARS = 1.5; // how long a wreck waits for a touch before it flies again on the next bar
