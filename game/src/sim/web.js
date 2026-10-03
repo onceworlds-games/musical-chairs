@@ -290,7 +290,7 @@ export function makeWeb(shapeId, lanes) {
     rim,
     start,
     vp: shape.vp ? shape.vp.slice() : [0, 0],
-    k: shape.closed ? 4.2 : 3.4,
+    k: shape.closed ? 3.4 : 2.8,
   };
 }
 

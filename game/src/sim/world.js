@@ -99,6 +99,7 @@ export class World {
     this.odUntil = -1;
     this.odExtended = 0;
     this.practice = Boolean(zone.practice);
+    this.forgive = Boolean(zone.practice || zone.guided); // practice and the guided first zone cost no ships
     // Bookkeeping for multiplier, chords and Perfect Bars.
     this.bw = -1;
     this.bwKills = 0;
@@ -167,8 +168,8 @@ export class World {
   // ---------------------------------------------------------------- events
 
   /** Records an event for the renderer, the audio and the network: [kind, id, lane, z, a, b]. */
-  event(kind, id = 0, lane = 0, z = 0, a = 0, b = 0) {
-    if (this.ev.length < 512) this.ev.push({ k: kind, id, lane, z, a, b, step: this.step });
+  event(kind, id = 0, lane = 0, z = 0, a = 0, b = 0, c = 0) {
+    if (this.ev.length < 512) this.ev.push({ k: kind, id, lane, z, a, b, c, step: this.step });
   }
 
   drain() {
@@ -211,11 +212,11 @@ export class World {
     // The phase machine.
     if (this.phase === PHASE.COUNTIN && this.tick >= COUNTIN_BARS * TICKS_PER_BAR) {
       this.setPhase(PHASE.PLAY);
-      if (this.zone.level >= 4) this.boss = makeBoss(this, this.def.boss);
+      if (this.zone.level >= 4 && !this.boss) this.boss = makeBoss(this, this.def.boss);
     }
     if ((this.phase === PHASE.PLAY || this.phase === PHASE.VAMP) && tickEdge) this.spawnDue();
-    if (this.phase === PHASE.PLAY && !this.boss && this.tick >= this.endTick) this.setPhase(PHASE.VAMP);
-    if (this.phase === PHASE.VAMP && barEdge) {
+    if (this.phase === PHASE.PLAY && !this.boss && this.tick >= this.endTick && this.auth) this.setPhase(PHASE.VAMP);
+    if (this.phase === PHASE.VAMP && barEdge && this.auth) {
       const live = this.enemies.some((e) => !e.dead && e.type !== E.SHOT && e.type !== E.MINE);
       const bars = (s - this.phaseAt) / STEPS_PER_BAR;
       if (!live || bars >= this.vampBars) {
@@ -223,23 +224,30 @@ export class World {
         this.setPhase(PHASE.WARP);
       }
     }
-    if (this.phase === PHASE.WARP && s - this.phaseAt >= WARP_BARS * STEPS_PER_BAR) this.finishZone();
+    if (this.phase === PHASE.WARP && s - this.phaseAt >= WARP_BARS * STEPS_PER_BAR && this.auth) this.finishZone();
 
     if (this.boss) updateBoss(this, this.boss);
 
-    // Ships move first, then they fire, then bolts fly, then enemies act, then contact.
-    for (const ship of this.ships) this.updateShip(ship);
-    this.updateBolts();
+    // Ships move first, then they fire, then bolts fly, then enemies act, then contact. A mirror catching up to a
+    // snapshot replays only the world: its own ship and bolts already lived through these steps.
+    if (!this.replaying) {
+      for (const ship of this.ships) this.updateShip(ship);
+      this.updateBolts();
+    }
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i];
       if (!e.dead) updateEnemy(this, e);
     }
     this.updatePickups();
     if (this.auth && this.choirs.size) this.updateChoirs();
-    this.updateHazards();
+    if (!this.replaying) this.updateHazards();
+    else {
+      this.pulses = this.pulses.filter((p) => p[1] > this.step);
+      this.booms = this.booms.filter((p) => p[1] > this.step);
+    }
     if (this.auth) this.updateCoop();
     this.compact();
-    this.guideHints();
+    if (!this.replaying) this.guideHints();
   }
 
   setPhase(phase) {
@@ -999,7 +1007,7 @@ export class World {
     this.mult = 1;
     this.event('down', ship.idx, laneOf(this.web, ship.u), 0, cause);
     if (!this.auth) return;
-    if (this.practice) {
+    if (this.forgive) {
       ship.state = 'wait';
       ship.respawnAt = this.nextBarStep(STEPS_PER_BEAT);
       return;

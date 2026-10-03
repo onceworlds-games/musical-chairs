@@ -13,7 +13,7 @@ import { laneOf, wrapU, laneDelta, laneDist, opposite } from './web.js';
 const ROLE = { CORE: 0, SEGMENT: 1, SHIELD: 2, MIRROR: 3 };
 const MOVEMENT_BARS = 14; // the Maestro's movements last at least this long, however hard it is hit
 
-export function makeBoss(w, kind) {
+export function makeBoss(w, kind, bare = false) {
   const def = BOSSES[kind] ?? BOSSES.hydra;
   const players = Math.max(1, w.ships.length);
   const dps = w.bpm / 15; // a Plectrum's bolts per second at this tempo
@@ -44,7 +44,8 @@ export function makeBoss(w, kind) {
     unsafe: (lane) => boss.tele.some((t) => t.lanes.includes(lane) && t.until > w.step && t.at - w.step < STEPS_PER_BEAT * 2),
   };
   w.event('boss', 0, 0, 0, 0, hp);
-  setup(w, boss);
+  // A mirror that arrives mid-fight takes the pieces from the host's snapshot instead.
+  if (!bare) setup(w, boss);
   return boss;
 }
 
@@ -243,7 +244,7 @@ function hydraTick(w, boss, inBar, bar) {
   if (inBar === 12 && !spitBar) {
     for (const h of heads(w, boss, segs)) boss.tele.push({ lanes: [laneOf(w.web, h.lane + boss.dir)], at: w.step + STEPS_PER_BEAT, until: w.step + STEPS_PER_BEAT, kind: 'spit' });
   }
-  if (inBar === 0 && spitBar && w.enemies.length < 80) {
+  if (inBar === 0 && spitBar && w.enemies.length < 80 && w.auth) {
     for (const h of heads(w, boss, segs)) {
       const f = spawnEnemy(w, E.FLIPPER, laneOf(w.web, h.lane), { z: h.z - 0.04, dir: boss.dir });
       w.event('spawn', f.id, f.lane, f.z, E.FLIPPER);
@@ -288,7 +289,7 @@ function gateTick(w, boss, inBar, bar) {
   const volley = boss.kind === 'maestro' ? every(boss, 2) : every(boss, 4);
   const gaps = gapLanes(w, boss);
   if (inBar % (volley * 4) === 4) boss.tele.push({ lanes: gaps, at: w.step + STEPS_PER_BEAT, until: w.step + STEPS_PER_BEAT, kind: 'volley' });
-  if (inBar % (volley * 4) === 8 && w.enemies.length < 85) {
+  if (inBar % (volley * 4) === 8 && w.enemies.length < 85 && w.auth) {
     for (const l of gaps) {
       const shot = spawnEnemy(w, E.SHOT, l, { z: 0.85 });
       w.event('eshot', shot.id, l, shot.z);
@@ -414,7 +415,7 @@ function mirrorTick(w, boss, inBar, bar) {
   const m = boss.parts.find((p) => !p.dead && p.a === ROLE.MIRROR && p.b === 0) || boss.parts.find((p) => !p.dead && p.a === ROLE.MIRROR);
   const period = every(boss, late ? 1 : 2) * 4;
   if (inBar % period === period - 2) boss.tele.push({ lanes: [laneOf(w.web, m.lane)], at: w.step + 2 * STEPS_PER_TICK, until: w.step + 2 * STEPS_PER_TICK, kind: 'aim' });
-  if (inBar % period === 0 && w.enemies.length < 85) {
+  if (inBar % period === 0 && w.enemies.length < 85 && w.auth) {
     const shot = spawnEnemy(w, E.SHOT, laneOf(w.web, m.lane), { z: m.z - 0.04 });
     w.event('eshot', shot.id, shot.lane, shot.z);
     if (late) {

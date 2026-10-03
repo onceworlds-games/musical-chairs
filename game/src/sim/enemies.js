@@ -183,8 +183,11 @@ export function updateEnemy(w, e) {
       if (e.z <= 0) {
         e.z = 0;
         w.rimArrival(e);
-        w.split(e);
-        w.remove(e);
+        // The host splits it; a mirror waits for the pieces to arrive in the next snapshot.
+        if (w.auth) {
+          w.split(e);
+          w.remove(e);
+        } else e.z = 0;
       }
       break;
     }

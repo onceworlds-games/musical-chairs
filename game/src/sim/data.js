@@ -264,9 +264,9 @@ export const SHIPS = [
 /** What unlocks each ship (checked against the profile). */
 export const SHIP_UNLOCKS = {
   plectrum: null,
-  mallet: { worldsCleared: 1, label: 'CLEAR ZONE 1' },
+  mallet: { worldsCleared: 1, label: 'BEAT THE HYDRA' },
   reed: { reached: 3, label: 'REACH WORLD 3' },
-  bow: { best: 150000, label: 'SCORE 150K' },
+  bow: { best: 1000000, label: 'SCORE 1M' },
   chime: { chords: 25, label: '25 CHORDS' },
   fork: { worldsCleared: 3, label: 'BEAT THE CONDUCTOR' },
 };
