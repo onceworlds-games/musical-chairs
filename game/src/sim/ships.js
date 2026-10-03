@@ -71,6 +71,7 @@ export const shipMethods = {
     if (!this.web.closed) to = Math.max(0, Math.min(this.n - 1, to));
     ship.u = wrapU(this.web, to);
     ship.pu = ship.u;
+    ship.in.target = Math.round(ship.u); // the blink lands where it lands: the ship does not slide back to the old lane
     ship.inv = Math.max(ship.inv, this.step + Math.round((SHIP.hopInvuln + 0.06 * gn) / this.dt));
     ship.contact = 0;
     ship.charge = 0;

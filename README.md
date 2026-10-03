@@ -48,15 +48,19 @@ In the lobby: Left / Right choose a ship or a mod, Space takes the mod, Enter st
   and Sky. Each has its own colour, web shapes (closed loops, open lines, a spiral), tempo, mode and groove.
 - **Earned looks.** Ship tints, trails, rim styles and the sound your ship makes when it falls.
 - **Calm.** A setting (and the platform's Reduce motion) that removes shake, colour splits, fast pulses and the zap's
-  wash. Nothing on screen ever flashes faster than three times a second.
+  wash. Nothing on screen ever flashes faster than three times a second (`npm run comfort` measures it).
+- **Fair falls.** A crawler that lands in your lane draws a closing diamond and sounds a warning; the fall says what
+  caught you; the results list the run's three biggest payouts.
 
 ## Playing together
 
-Rimshot is a friends game for one to four ships on one rim: lives and Overdrive are shared, ships within three lanes
-of each other are joined by a tether that burns crawlers between them, and a fallen ship is revived by flying over its
-wreck. The host's page runs the zone and publishes snapshots a few times a second; everyone else mirrors it with the
-same rules, flies their own ship and sends their hits to the host, so a reload, a dropped connection or a new host
-carries on where the zone was.
+Rimshot is a friends game for one to four ships on one rim. Ships and Overdrive are shared: a crew starts with more ships
+(five, six or seven for two, three or four pilots), but every fall costs one, and a friend who flies over the wreck
+within a bar and a half gives most of it back (five rescues pay for four ships). Ships within three lanes of each other
+are joined by a tether that burns crawlers between them. A crew meets a denser score, tougher enemies, bosses with more
+life and Resonance that fills more slowly per kill; Overclock is the dial for a crew that wants more. The host's page
+runs the zone and publishes snapshots a few times a second; everyone else mirrors it with the same rules, flies their
+own ship and sends their hits to the host, so a reload, a dropped connection or a new host carries on where the zone was.
 
 Each zone is a platform match: between zones the lobby is the draft (pick a mod, ready up, the host starts), and a
 friend who arrives mid-zone watches until the next one.
@@ -85,6 +89,8 @@ npm run dev       # http://localhost:5173: the game alone, without the platform
 npm test          # the simulation, saves, snapshots and the run's lifecycle
 npm run balance   # the balance harness (or: node scripts/balance.mjs quick survival final ships mods)
 npm run smoke     # headless Chrome plays a zone from the title to the draft, desktop and phone; fails on any error
+npm run audio     # renders the band and a busy fight offline and checks level, clipping, holes and the kick against the beat grid
+npm run comfort   # plays the loudest moments on a virtual clock and measures flashes, shake and what Calm removes
 npm run store     # store art and badge icons from the game's own ?poster= scenes
 ```
 

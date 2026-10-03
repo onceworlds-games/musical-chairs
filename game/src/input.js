@@ -30,6 +30,7 @@ export class Input {
     this.autofire = false;
     this.usedTouch = false;
     this.lastDevice = 'keys';
+    this.lastU = null; // where the ship was on the last frame (a jump means a hop or a respawn moved it)
     this.pad = { active: false, prev: new Set(), lane: null, idx: -1 };
     this.padOk = typeof navigator !== 'undefined' && typeof navigator.getGamepads === 'function';
     this.enabled = false; // only while a zone is being played
@@ -263,6 +264,20 @@ export class Input {
     const out = { target: null, fire: false, hop: false, zap: false };
     if (!ship || !web) return out;
     const now = performance.now();
+    // Something other than the controls moved the ship (a hop, a respawn, a rescue): its new place becomes where the
+    // controls point, or it would slide straight back to the lane the keys, the finger or the pointer still name.
+    let moved = false;
+    if (this.lastU !== null) {
+      let d = ship.u - this.lastU;
+      if (web.closed) d = (((d % web.n) + web.n * 1.5) % web.n) - web.n / 2;
+      if (Math.abs(d) > 1.6) {
+        moved = true;
+        if (this.kbTarget !== null) this.kbTarget = Math.round(ship.u);
+        this.touchU = ship.u;
+        this.mouse.moved = -1e9;
+      }
+    }
+    this.lastU = ship.u;
     // Keys: keep running while held.
     if (this.kbDir && this.held(this.kbDir < 0 ? LEFT : RIGHT) && now - this.kbSince > 110) {
       const d = this.kbTarget - ship.u;
@@ -284,6 +299,7 @@ export class Input {
     } else if (now - this.mouse.moved < 1500 && this.mouse.inside) {
       out.target = this.view.laneAt(this.mouse.x, this.mouse.y);
     } else if (this.kbTarget !== null) out.target = this.kbTarget;
+    if (moved) out.target = Math.round(ship.u);
     if (out.target !== null && web.closed) out.target = ((out.target % web.n) + web.n) % web.n;
     if (out.target !== null && !web.closed) out.target = Math.max(0, Math.min(web.n - 1, out.target));
     // Keep the dial's count in step with where the ship really is (a hop, a respawn).
