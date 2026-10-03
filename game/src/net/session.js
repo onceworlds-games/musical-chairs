@@ -213,9 +213,9 @@ export class Session {
     const room = this.room;
     if (!room) return;
     const m = this.match;
-    const run = this.run;
     const host = this.isHost;
-    if (host) this.hostDuties(m, run);
+    if (host) this.hostDuties(m, this.run);
+    const run = this.run; // as the host may just have written it
     if (m.phase !== 'playing') {
       if (this.world) this.dropWorld();
       return;
