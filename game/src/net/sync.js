@@ -139,7 +139,6 @@ export function apply(w, snap, me, spawnEnemy, predictedFor = 40, makeBoss = nul
   w.res = snap.re;
   w.odUntil = snap.od > 0 ? s + snap.od : -1;
   w.lives = snap.lv;
-  w.rng.s = snap.r >>> 0 || 1;
   w.nextId = snap.nid;
   w.spawnIdx = Math.max(0, Math.min(w.spawns.length, snap.si));
   for (let i = 0; i < w.n && i < snap.sp.length; i++) w.spikes[i] = snap.sp[i];
@@ -255,6 +254,8 @@ export function apply(w, snap, me, spawnEnemy, predictedFor = 40, makeBoss = nul
   w.stats.tether = int(st.t, 0, 1e6, w.stats.tether);
   w.stats.maxMult = int(st.x, 1, 12, w.stats.maxMult);
   w.stats.bossDown = st.b === 1;
+  // Last: rebuilding the enemies above draws from the stream; from here on it matches the host's, draw for draw.
+  w.rng.s = snap.r >>> 0 || 1;
 }
 
 /** A client's batch for the host: hit claims, hops, a zap or a fall. Shape-checked by the host with readBatch. */

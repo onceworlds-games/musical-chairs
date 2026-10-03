@@ -17,7 +17,7 @@ export function makeBoss(w, kind, bare = false) {
   const def = BOSSES[kind] ?? BOSSES.hydra;
   const players = Math.max(1, w.ships.length);
   const dps = w.bpm / 15; // a Plectrum's bolts per second at this tempo
-  const hp = Math.round(def.secs * dps * (1 + 0.1 * w.oc) * (1 + 0.6 * (players - 1)) * (w.zone.depth ? 1 + 0.05 * w.zone.depth : 1));
+  const hp = Math.round(def.secs * dps * (1 + 0.1 * w.oc) * (1 + 0.85 * (players - 1)) * (w.zone.depth ? 1 + 0.05 * w.zone.depth : 1));
   const boss = {
     kind,
     name: def.name,
@@ -246,7 +246,7 @@ function hydraTick(w, boss, inBar, bar) {
   }
   if (inBar === 0 && spitBar && w.enemies.length < 80 && w.auth) {
     for (const h of heads(w, boss, segs)) {
-      const f = spawnEnemy(w, E.FLIPPER, laneOf(w.web, h.lane), { z: h.z - 0.04, dir: boss.dir });
+      const f = spawnEnemy(w, E.FLIPPER, laneOf(w.web, h.lane), { z: h.z - 0.04, dir: boss.dir, rng: w.hrng });
       w.event('spawn', f.id, f.lane, f.z, E.FLIPPER);
     }
   }
@@ -291,7 +291,7 @@ function gateTick(w, boss, inBar, bar) {
   if (inBar % (volley * 4) === 4) boss.tele.push({ lanes: gaps, at: w.step + STEPS_PER_BEAT, until: w.step + STEPS_PER_BEAT, kind: 'volley' });
   if (inBar % (volley * 4) === 8 && w.enemies.length < 85 && w.auth) {
     for (const l of gaps) {
-      const shot = spawnEnemy(w, E.SHOT, l, { z: 0.85 });
+      const shot = spawnEnemy(w, E.SHOT, l, { z: 0.85, rng: w.hrng });
       w.event('eshot', shot.id, l, shot.z);
     }
   }
@@ -416,10 +416,10 @@ function mirrorTick(w, boss, inBar, bar) {
   const period = every(boss, late ? 1 : 2) * 4;
   if (inBar % period === period - 2) boss.tele.push({ lanes: [laneOf(w.web, m.lane)], at: w.step + 2 * STEPS_PER_TICK, until: w.step + 2 * STEPS_PER_TICK, kind: 'aim' });
   if (inBar % period === 0 && w.enemies.length < 85 && w.auth) {
-    const shot = spawnEnemy(w, E.SHOT, laneOf(w.web, m.lane), { z: m.z - 0.04 });
+    const shot = spawnEnemy(w, E.SHOT, laneOf(w.web, m.lane), { z: m.z - 0.04, rng: w.hrng });
     w.event('eshot', shot.id, shot.lane, shot.z);
     if (late) {
-      const echo = spawnEnemy(w, E.SHOT, laneOf(w.web, m.lane), { z: m.z + 0.06 });
+      const echo = spawnEnemy(w, E.SHOT, laneOf(w.web, m.lane), { z: m.z + 0.06, rng: w.hrng });
       w.event('eshot', echo.id, echo.lane, echo.z);
     }
   }

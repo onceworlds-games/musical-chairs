@@ -96,7 +96,7 @@ export const coopMethods = {
       const taken = new Set(living.map((o) => Math.round(o.lane)));
       for (const lane of c.lanes) {
         if (taken.has(lane) || this.enemies.length >= 90) continue;
-        const s = spawnEnemy(this, E.SIREN, lane, { z, group });
+        const s = spawnEnemy(this, E.SIREN, lane, { z, group, rng: this.hrng });
         this.event('spawn', s.id, lane, z, E.SIREN);
       }
       this.event('reform', group, c.lanes[0], z);
@@ -105,7 +105,7 @@ export const coopMethods = {
 
   dropPickup(e) {
     if (!this.auth || this.pickups.length >= 6) return;
-    const r = this.rng.next();
+    const r = this.hrng.next();
     const kind = r < 0.45 ? PICKUPS.ZAP : r < 0.88 ? PICKUPS.TEMPO : PICKUPS.LIFE;
     this.pickups.push({ id: this.nextId++, kind, lane: Math.round(e.lane), z: Math.max(0.05, e.z), dead: false, pz: e.z, pl: Math.round(e.lane) });
   },

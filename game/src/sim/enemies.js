@@ -13,6 +13,8 @@ let scratch = null;
 
 /** Creates an enemy at the far end (or where told). Returns it. */
 export function spawnEnemy(w, type, lane, opts = {}) {
+  // Spawns only the host makes draw from its own stream, so a mirror's shared one stays in step.
+  const rng = opts.rng || w.rng;
   const def = ENEMIES[type];
   const e = w.pool.pop() || {};
   e.id = opts.id ?? w.nextId++;
@@ -26,7 +28,7 @@ export function spawnEnemy(w, type, lane, opts = {}) {
   e.to = e.lane;
   e.fs = -1; // flip start step (-1: not flipping)
   e.fl = 0; // flip length in steps
-  e.dir = opts.dir ?? (w.rng.chance(0.5) ? 1 : -1);
+  e.dir = opts.dir ?? (rng.chance(0.5) ? 1 : -1);
   e.next = w.tick + (opts.delay ?? 1); // tick of its next decision
   e.t0 = w.step; // birth step
   e.a = 0; // type-specific numbers
@@ -39,10 +41,10 @@ export function spawnEnemy(w, type, lane, opts = {}) {
   e.flash = 0; // steps of hit flash (render)
   e.px = e.lane; // previous position (render interpolation)
   e.pz = e.z;
-  if (type === E.SPIKER) e.a = w.oc >= 4 ? w.rng.range(0.12, 0.45) : w.rng.range(0.28, 0.6); // the depth it climbs to
+  if (type === E.SPIKER) e.a = w.oc >= 4 ? rng.range(0.12, 0.45) : rng.range(0.28, 0.6); // the depth it climbs to
   if (type === E.WEAVER) {
     e.a = e.lane; // centre line
-    e.b = w.rng.range(1.2, 1.9) * (w.rng.chance(0.5) ? 1 : -1); // amplitude, lanes
+    e.b = rng.range(1.2, 1.9) * (rng.chance(0.5) ? 1 : -1); // amplitude, lanes
     if (!w.web.closed) e.a = Math.max(Math.abs(e.b), Math.min(w.web.n - 1 - Math.abs(e.b), e.a));
   }
   if (type === E.FUSEBALL) {
@@ -57,7 +59,7 @@ export function spawnEnemy(w, type, lane, opts = {}) {
     e.z = opts.z ?? 1;
     e.st = S.FLY;
     e.a = 0; // mines dropped
-    e.b = w.rng.int(4) + 4; // lanes before it turns
+    e.b = rng.int(4) + 4; // lanes before it turns
   }
   if (type === E.MINE) e.a = 4; // beats on the count once armed
   if (type === E.SHOT) e.next = Infinity;

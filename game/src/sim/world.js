@@ -64,9 +64,11 @@ export class World {
     // Deeper worlds' enemies take more hitting (fractions matter: 1.25 needs two plain bolts, or one heavy one).
     this.tough = ramp ? ramp.tough : (world.tough || 1) + 0.03 * Math.max(0, zone.depth || 0);
     this.rng = new Rng(hash32('sim', zone.seed, zone.world, zone.level, zone.depth || 0));
+    this.hrng = new Rng(hash32('host', zone.seed, zone.world, zone.level, zone.depth || 0)); // the host's alone: pickups, its own spawns
     zone.n = this.n;
     zone.closed = this.web.closed;
     zone.start = this.web.start;
+    zone.crowd = Math.max(1, Math.min(4, players.length)); // every page builds the same zone for the same roster
     const built = buildZone(zone);
     this.spawns = built.spawns;
     this.endTick = built.endTick;
@@ -402,7 +404,7 @@ export class World {
     // Type-specific aftermath.
     if (e.type === E.TANKER && cause !== 'zap') this.split(e);
     if (e.type === E.SIREN) this.choirKill(e);
-    if (e.type === E.TANKER && this.rng.chance(0.3)) this.dropPickup(e);
+    if (e.type === E.TANKER && this.hrng.chance(0.3)) this.dropPickup(e);
     else if (this.killsTotal % 28 === 0) this.dropPickup(e);
     // Mods that ride on kills.
     if (ship && cause !== 'chain') {
@@ -528,7 +530,7 @@ export class World {
     const lane = Math.round(e.lane);
     for (const side of [-1, 1]) {
       if (this.enemies.length >= 90) break;
-      const c = spawnEnemy(this, cargo, lane, { z: Math.max(0, e.z), dir: side, delay: 0 });
+      const c = spawnEnemy(this, cargo, lane, { z: Math.max(0, e.z), dir: side, delay: 0, rng: this.hrng });
       if (!this.web.closed && neighbour(this.web, lane, side) < 0) c.dir = -side;
       if (c.z <= 0) {
         c.z = 0;
@@ -546,13 +548,13 @@ export class World {
 
   enemyShot(e) {
     if (this.enemies.length >= 90 || !this.auth) return;
-    const s = spawnEnemy(this, E.SHOT, Math.round(e.lane), { z: e.z - 0.03 });
+    const s = spawnEnemy(this, E.SHOT, Math.round(e.lane), { z: e.z - 0.03, rng: this.hrng });
     this.event('eshot', s.id, s.lane, s.z);
   }
 
   dropMine(e) {
     if (!this.auth || this.enemies.length >= 90) return;
-    const m = spawnEnemy(this, E.MINE, Math.round(e.lane), { z: e.z - 0.02 });
+    const m = spawnEnemy(this, E.MINE, Math.round(e.lane), { z: e.z - 0.02, rng: this.hrng });
     this.event('drop', m.id, m.lane, m.z);
   }
 

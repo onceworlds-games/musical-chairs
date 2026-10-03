@@ -336,3 +336,4 @@ export const OVERCLOCK = [
 ];
 export const OC_BPM = 2; // per rung
 export const OC_BUDGET = 0.07; // per rung
+export const CROWD_BUDGET = 0.6; // more threat per extra ship in the zone

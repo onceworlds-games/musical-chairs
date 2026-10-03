@@ -50,10 +50,13 @@ test('a mirror given the host snapshot plays the next beats the same way', () =>
   const snap = clean(JSON.parse(JSON.stringify(encode(host, 'm1', []))), host.n);
   mirror.step = host.step;
   apply(mirror, snap, 1, spawnEnemy, 48, makeBoss);
-  // Same inputs from here on: nobody fires (the host's own bolts are its own), ships hold their lanes.
+  // Same inputs from here on: nobody fires, the bolts already in flight are gone (each page's bolts are its own),
+  // ships hold their lanes.
+  host.bolts.length = 0;
   for (const s of [...host.ships, ...mirror.ships]) {
     s.in.fire = false;
     s.in.target = Math.round(s.u);
+    s.echoes.length = 0;
   }
   mirror.ships[0].u = host.ships[0].u;
   mirror.ships[1].u = host.ships[1].u;
