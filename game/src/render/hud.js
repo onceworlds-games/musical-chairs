@@ -165,7 +165,7 @@ export class Hud {
     if (this.hint) {
       const f = Math.min(1, this.hint.life, (this.hint.max - this.hint.life) * 4);
       // Up under the zone's name: clear of the ship at the rim, the thumbs below and the words in the middle.
-      const hy = d.short ? 40 : W < 440 ? 100 : Math.max(40, H * 0.1);
+      const hy = d.short ? 40 : W < 440 ? 70 : Math.max(40, H * 0.1);
       v.text(this.hint.text, W / 2, hy, small ? 13 : 16, WHITE, 0.5, 0.95 * f);
     }
   }
