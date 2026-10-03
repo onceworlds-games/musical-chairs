@@ -19,6 +19,7 @@ import { WORLDS, SHIPS, MODS, E } from './sim/data.js';
 import { parseProfile, recordRun, SAVE_KEY, TINTS, TRAILS, RIMS, TAPES, met, shipUnlocked, ocAllowed } from './sim/profile.js';
 import { zoneFor, dayOf, TEMPOS } from './sim/run.js';
 import { runPoster } from './poster.js';
+import { RIM_ORDER } from './ui/menus.js';
 
 const params = new URLSearchParams(location.search);
 const WHITE = '#ffffff';
@@ -143,7 +144,9 @@ class App {
 
   layoutView() {
     const touch = platform.touch || this.input.usedTouch;
-    this.view.layout(this.W, this.H, this.W < 520 ? 92 : 64, touch ? 96 : 52);
+    // The lobby keeps the players' row above the tunnel and the platform's Ready strip below it.
+    if (this.screen === 'lobby') this.view.layout(this.W, this.H, 112, 112);
+    else this.view.layout(this.W, this.H, this.W < 520 ? 92 : 64, touch ? 96 : 52);
   }
 
   // ---------------------------------------------------------------- saves
@@ -281,6 +284,7 @@ class App {
       this.setPaused(false, true);
       this.engine.setDuck(this.menuOpen);
     }
+    this.layoutView();
     if (next === 'lobby') {
       this.menus.look = false;
       this.recordResults();
@@ -300,9 +304,7 @@ class App {
 
   hue() {
     if ((this.screen === 'play' || this.screen === 'watch') && this.play.hue) return this.play.hue;
-    const run = this.session.run;
-    if (run && this.session.match.phase === 'lobby' && run.status === 'draft') return WORLDS[zoneFor(run, run.idx).world].hue;
-    return WORLDS[0].hue;
+    return WORLDS[this.attractWorld ?? 0]?.hue || WORLDS[0].hue;
   }
 
   // ---------------------------------------------------------------- the zone
@@ -485,18 +487,38 @@ class App {
 
   // ---------------------------------------------------------------- menus and the attract mode behind them
 
-  /** A bot plays a web behind the title and the lobby, quietly. */
+  /** What plays behind the menus: a demo wave on the title, the next zone's web (or the last one's) in the lobby. */
+  stageSpec() {
+    const s = this.session;
+    const run = s.run;
+    if (this.screen === 'title' || this.screen === 'connecting' || this.screen === 'closed' || this.screen === 'wait') return { key: 'demo', world: 0, demo: true };
+    // The lobby's stage is always a ring of sixteen lanes, in the colour of the world that comes next (or ended).
+    if (run && s.match.phase === 'lobby' && run.status === 'draft') {
+      const z = zoneFor(run, run.idx);
+      return { key: `draft:${run.rid}:${run.idx}`, world: z.world, shape: 'circle' };
+    }
+    if (run && s.match.phase === 'lobby' && run.status === 'over') {
+      const z = zoneFor(run, Math.max(0, run.idx));
+      return { key: `over:${run.rid}`, world: z.world, shape: 'circle' };
+    }
+    return { key: 'hub', world: 0, shape: 'circle' };
+  }
+
   drawBackdrop(dt) {
-    const run = this.session.run;
-    const wantWorld = run && this.session.match.phase === 'lobby' && run.status === 'draft' ? zoneFor(run, run.idx).world : 0;
-    if (!this.attract || this.attract.phase >= PHASE.DONE || wantWorld !== this.attractWorld) {
-      const world = wantWorld;
-      this.attractWorld = world;
-      const def = WORLDS[world];
-      const zone = { mode: 'run', world, level: 1 + Math.floor(Math.random() * 3), shape: def.shapes[Math.floor(Math.random() * def.shapes.length)], bpm: def.bpm, seed: Math.floor(Math.random() * 1e9), oc: 0 };
+    const spec = this.stageSpec();
+    if (!this.attract || this.stageKey !== spec.key || (spec.demo && this.attract.phase >= PHASE.DONE)) {
+      const def = WORLDS[spec.world];
+      const shape = spec.shape || def.shapes[Math.floor(Math.random() * def.shapes.length)];
+      const zone = { mode: 'run', world: spec.world, level: 1 + Math.floor(Math.random() * 3), shape, bpm: def.bpm, seed: Math.floor(Math.random() * 1e9), oc: 0 };
       this.attract = new World({ zone, players: [{ id: 'bot', ship: Math.floor(Math.random() * 3), mods: { pierce: 1, spread: 1 }, kind: 'bot' }], carry: { lives: 99 } });
-      this.attractBot = new Bot('expert', 7);
+      if (!spec.demo) {
+        this.attract.spawns = [];
+        this.attract.ships[0].gone = true;
+      }
+      this.attractBot = spec.demo ? new Bot('expert', 7) : null;
       this.attractT = 0;
+      this.attractWorld = spec.world;
+      this.stageKey = spec.key;
       this.view.setWeb(this.attract.web, def.hue);
       this.music.setWorld(def);
       this.engine.resync();
@@ -511,18 +533,32 @@ class App {
     const target = Math.floor(this.attractT / w.dt);
     let n = 0;
     while (w.step < target && n++ < 30) {
-      this.attractBot.drive(w, w.ships[0]);
+      if (this.attractBot) this.attractBot.drive(w, w.ships[0]);
       w.update();
     }
     for (const ev of w.drain()) {
       if (ev.k === 'kill') this.fx.shatter(this.shapePoints(ev.a, ev.lane, ev.z), WORLDS[this.attractWorld].hue, 90, 0.4);
     }
-    // The lobby's music: the next world's groove, quietly, on the attract clock.
-    this.music.setLayer(this.screen === 'title' ? 0 : 1, 0);
+    // The lobby's music: the next world's groove, quietly, on the stage's own clock.
+    this.music.setLayer(this.screen === 'title' ? 1 : 0, 0);
     this.engine.sync(this.attractT, w.bpm, false);
-    this.view.draw({ w, alpha: 1, t: this.attractT, me: -1, tints: [WHITE], calm: this.calm, pulse: 0.3, od: false, shake: null });
+    const beat = (this.attractT * w.bpm) / 60;
+    this.view.draw({ w, alpha: 1, t: this.attractT, me: -1, tints: [WHITE], calm: this.calm, pulse: this.calm ? 0 : Math.max(0, 1 - (beat % 1) * 2), od: false, shake: null, rim: RIMS[this.profile.rim]?.key || 'plain', trails: [] });
     this.fx.draw(this.vec);
-    this.dim(this.screen === 'title' ? 0.3 : 0.78);
+    this.dim(this.screen === 'title' ? 0.12 : this.menus.look ? 0.75 : 0.3);
+    // The middle of the tunnel darkens a little so words read over the lanes.
+    if (this.screen === 'lobby' && !this.menus.look) {
+      const v = this.view;
+      const c = this.vec.ctx;
+      c.globalCompositeOperation = 'source-over';
+      const g = c.createRadialGradient(v.cx, v.cy, 0, v.cx, v.cy, v.S * 0.7);
+      g.addColorStop(0, 'rgba(2,4,3,0.82)');
+      g.addColorStop(0.75, 'rgba(2,4,3,0.55)');
+      g.addColorStop(1, 'rgba(2,4,3,0)');
+      c.fillStyle = g;
+      c.fillRect(v.cx - v.S, v.cy - v.S, v.S * 2, v.S * 2);
+      c.globalCompositeOperation = 'lighter';
+    }
   }
 
   drawMenu() {
@@ -535,9 +571,8 @@ class App {
       case 'closed':
         return this.menus.closed(v, this.W, this.H, this.t, hue, s.closed);
       case 'title': {
-        this.joinedRunning = s.match.phase === 'playing';
         const b = this.menus.title(v, this.W, this.H, this.t, hue);
-        if (this.input.take('confirm')) this.press('play');
+        if (this.input.take('confirm') || this.input.take('fire')) this.press('play');
         return b;
       }
       case 'wait':
@@ -545,10 +580,18 @@ class App {
         return [];
       case 'lobby': {
         const screen = s.lobbyScreen();
-        this.input.take('pause');
+        if (this.input.take('pause') && this.menus.look) this.menus.look = false;
         if (this.input.take('confirm')) this.press('start');
-        if (screen === 'draft') return this.menus.draft(v, this.W, this.H, this.t, hue);
+        const left = this.input.take('left');
+        const right = this.input.take('right');
+        const fire = this.input.take('fire');
+        if (screen === 'draft') {
+          if (left || right) this.menus.draftKey(left ? -1 : 1);
+          if (fire) this.menus.draftKey(0);
+          return this.menus.draft(v, this.W, this.H, this.t, hue);
+        }
         if (screen === 'results') return this.menus.results(v, this.W, this.H, this.t, hue);
+        if ((left || right) && !this.menus.look) this.cycleShip(left ? -1 : 1);
         return this.menus.hub(v, this.W, this.H, this.t, hue);
       }
     }
@@ -578,7 +621,10 @@ class App {
         return;
       case 'ship': {
         const i = Number(arg);
-        if (!shipUnlocked(this.profile, i)) return this.music.denied();
+        if (!shipUnlocked(this.profile, i)) {
+          this.menus.flash = { i, at: performance.now() };
+          return this.music.denied();
+        }
         s.pickShip(i);
         this.profile.ship = i;
         this.saveSoon();
@@ -646,6 +692,18 @@ class App {
         s.connect();
         return;
     }
+  }
+
+  /** Left and right on the hub walk the ships along the rim (skipping locked ones). */
+  cycleShip(dir) {
+    const s = this.session;
+    const order = RIM_ORDER;
+    let k = order.indexOf(s.myShip);
+    for (let n = 0; n < order.length; n++) {
+      k = (k + dir + order.length) % order.length;
+      if (shipUnlocked(this.profile, order[k])) break;
+    }
+    if (order[k] !== s.myShip) this.press(`ship:${order[k]}`);
   }
 
   // ---------------------------------------------------------------- the run's end, folded into the profile

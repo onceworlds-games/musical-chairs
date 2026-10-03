@@ -26,7 +26,7 @@ export class Input {
     this.touches = new Map(); // id -> { x, y, sx, sy, t }
     this.steer = null; // the steering finger
     this.touchU = null;
-    this.edges = { hop: false, zap: false, pause: false, confirm: false, back: false };
+    this.edges = { hop: false, zap: false, pause: false, confirm: false, back: false, left: false, right: false, fire: false };
     this.autofire = false;
     this.usedTouch = false;
     this.lastDevice = 'keys';
@@ -87,8 +87,15 @@ export class Input {
       // Enter on a focused button presses that button, not the screen's default.
       if (k === 'Enter' && !(document.activeElement && document.activeElement.tagName === 'BUTTON')) this.edges.confirm = true;
       if ((k === 'f' || k === 'F') && this.enabled) this.autofire = !this.autofire;
-      if (LEFT.has(k)) this.stepKey(-1);
-      if (RIGHT.has(k)) this.stepKey(1);
+      if (LEFT.has(k)) {
+        this.stepKey(-1);
+        this.edges.left = true;
+      }
+      if (RIGHT.has(k)) {
+        this.stepKey(1);
+        this.edges.right = true;
+      }
+      if (FIRE.has(k) && !this.enabled) this.edges.fire = true;
     } else {
       this.keys.delete(k);
       if ((LEFT.has(k) && this.kbDir < 0) || (RIGHT.has(k) && this.kbDir > 0)) {
