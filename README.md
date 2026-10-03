@@ -99,13 +99,16 @@ expert player) through the simulation with random drafts. Last run (300 runs per
 
 | | novice | average | expert |
 | --- | --- | --- | --- |
-| Clears zone 1-1 | 98% | 100% | 100% |
-| Clears world 3 | 4% | 91% | 100% |
-| Beats the Maestro with a good build | 0% | 0% | 46% |
-| Mean run length | 7 min | 19 min | 22 min |
+| Clears zone 1-1 | 99% | 100% | 100% |
+| Clears world 3 | 2% | 86% | 98% |
+| Beats the Maestro with a good build | 0% | 5% | 41% |
+| Mean run length | 7 min | 18 min | 22 min |
 
-Top-decile score over the median: 2.3x for the average bot. Every ship clears world 4 with its own best build within
-eleven points of the others (65-76% for the average bot).
+Top-decile score over the median: 3.3x, 2.5x and 1.6x. Every ship clears world 4 with its own best build within
+eight points of the others (59-67% for the average bot). No mod at its full stack adds more than 15 points to the
+expert's Maestro clear rate (the strongest: Grace Note +15 and Spread +13, over 600 runs) and no pair more than 28.
+In the Descent the average bot reaches depth 10 in 11 minutes. In company the run is kinder: two average bots beat
+the Maestro 34% of the time, four 93% (Overclock is the dial for a group that wants more).
 
 ## Badges and boards
 
