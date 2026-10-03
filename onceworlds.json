@@ -1,0 +1,8 @@
+{
+  "slug": "rimshot",
+  "name": "Rimshot",
+  "description": "A neon tunnel shooter that plays its own music. Inspired by Tempest.",
+  "dir": "game",
+  "productionBranch": "main",
+  "genre": "Shooter"
+}
