@@ -16,6 +16,9 @@ export const BOSS_BARS = 40; // a boss that outlasts this many bars starts to hu
 export const VAMP_BARS = 8; // after the last stanza, survivors get this long before they scatter
 export const WARP_BARS = 1;
 
+/** The fastest tempo anything runs at: 175 beats a minute is 2.9 beats a second, so no pulse on the beat can pass three a second. */
+export const MAX_BPM = 175;
+
 /** Seconds per simulation step at a tempo. */
 export const stepSeconds = (bpm) => 60 / bpm / TICKS_PER_BEAT / STEPS_PER_TICK;
 

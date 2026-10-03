@@ -7,7 +7,7 @@ import { Rng, hash32 } from '../game/src/sim/rng.js';
 import { makeWeb, SHAPES, laneDelta, laneOf, wrapU, opposite } from '../game/src/sim/web.js';
 import { buildZone, validateZone } from '../game/src/sim/levelgen.js';
 import { zoneFor, draftOptions, cleanMods, dailyFor, zoneCount, addMod } from '../game/src/sim/run.js';
-import { E, MODS, SHIPS, WORLDS, STEPS_PER_BAR, STEPS_PER_BEAT, descentRamp, startLives, maxLivesFor } from '../game/src/sim/data.js';
+import { E, MODS, SHIPS, WORLDS, STEPS_PER_BAR, STEPS_PER_BEAT, MAX_BPM, descentRamp, startLives, maxLivesFor } from '../game/src/sim/data.js';
 import { spawnEnemy, S } from '../game/src/sim/enemies.js';
 import { playRun } from '../game/src/sim/headless.js';
 
@@ -505,4 +505,25 @@ test('the Descent starts as gently as the first world and only climbs', () => {
     prev = r;
   }
   assert.ok(descentRamp(12).tough === 2 && descentRamp(79).tough <= 3.5);
+});
+
+test('comfort: no tempo in any mode, zone, Overclock or practice speed beats faster than three times a second', () => {
+  let fastest = 0;
+  for (const mode of ['run', 'descent', 'daily']) {
+    for (let oc = 0; oc <= 8; oc++) {
+      for (let idx = 0; idx < 200; idx++) {
+        const z = zoneFor({ mode, seed: 7, oc, daily: dailyFor(3) }, idx);
+        const w = new World({ zone: z, players: [{ id: 'a', ship: 0 }] });
+        fastest = Math.max(fastest, w.bpm);
+      }
+    }
+  }
+  for (let world = 0; world < WORLDS.length; world++) {
+    for (const tempo of [0.8, 0.9, 1, 1.1, 1.2]) {
+      const z = zoneFor({ mode: 'practice', seed: 7, practice: { world, level: 1, tempo } }, 0);
+      fastest = Math.max(fastest, new World({ zone: z, players: [{ id: 'a', ship: 0 }] }).bpm);
+    }
+  }
+  assert.ok(fastest <= MAX_BPM, `${fastest} beats a minute`);
+  assert.ok(MAX_BPM / 60 < 3);
 });

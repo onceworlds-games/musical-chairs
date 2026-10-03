@@ -159,13 +159,20 @@ export class Bot {
         const fwd = danger[wrapLane(w, here + 3)];
         const back = danger[wrapLane(w, here - 3)];
         ship.dir = fwd <= back ? 1 : -1;
-        if (w.web.closed || (here + ship.dir * 3 >= 0 && here + ship.dir * 3 < n)) ship.in.hop = true;
+        if (w.web.closed || (here + ship.dir * 3 >= 0 && here + ship.dir * 3 < n)) {
+          ship.in.hop = true;
+          this.target = wrapLane(w, here + ship.dir * 3); // it lands there and stays (a hop is not a round trip)
+        }
       }
     }
     // An on-the-beat hop for the multiplier, when nothing much is happening.
     if (!ship.in.hop && k.beatHop && w.step >= ship.hopCd && danger[here] < 1 && this.rng.next() < k.beatHop * 0.08) {
       const phase = w.step % STEPS_PER_BEAT;
-      if (phase >= STEPS_PER_BEAT - 2 || phase <= 1) ship.in.hop = true;
+      if (phase >= STEPS_PER_BEAT - 2 || phase <= 1) {
+        ship.in.hop = true;
+        const to = here + ship.dir * 3;
+        if (w.web.closed || (to >= 0 && to < n)) this.target = wrapLane(w, to);
+      }
     }
 
     // Zap: when trouble crowds the rim, or the ship is cornered.

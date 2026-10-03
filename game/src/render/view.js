@@ -6,6 +6,7 @@ import { SHAPE, SHIP_SHAPES, WRECK, fuseStrokes, noteStrokes } from './shapes.js
 import { ghostVisible, S as ST } from '../sim/enemies.js';
 import { PHASE } from '../sim/world.js';
 import { hazardMethods } from './hazards.js';
+import { tone } from './vector.js';
 
 const WHITE = '#ffffff';
 const tmpA = [0, 0];
@@ -317,6 +318,7 @@ export class View {
     this.cx += shakeX;
     this.cy += shakeY;
 
+    this.tunnelLight(scene);
     this.drawWeb(scene);
     this.drawHazards(scene);
     this.drawSpikes(scene);
@@ -326,6 +328,31 @@ export class View {
     this.drawShips(scene);
     this.cx -= shakeX;
     this.cy -= shakeY;
+  }
+
+  /** A soft pool of the world's colour at the far end, so the lanes run into light (high quality only; cached). */
+  tunnelLight(scene) {
+    const v = this.vec;
+    if (v.quality !== 'high' || !v.ctx.createRadialGradient) return;
+    const r = Math.max(40, this.S * 0.62);
+    const key = `${this.hue}|${Math.round(r)}`;
+    const c = v.ctx;
+    if (this.lightKey !== key) {
+      const t = tone(this.hue).rgb;
+      const g = c.createRadialGradient(0, 0, 0, 0, 0, r);
+      g.addColorStop(0, `rgba(${t[0]},${t[1]},${t[2]},0.075)`);
+      g.addColorStop(0.5, `rgba(${t[0]},${t[1]},${t[2]},0.028)`);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      this.light = g;
+      this.lightKey = key;
+    }
+    c.save();
+    c.translate(this.vx(), this.vy());
+    c.scale(this.Sx / this.S, this.Sy / this.S);
+    c.globalAlpha = scene.od ? 1.5 : 1;
+    c.fillStyle = this.light;
+    c.fillRect(-r, -r, r * 2, r * 2);
+    c.restore();
   }
 
   drawWeb(scene) {
@@ -353,10 +380,11 @@ export class View {
       v.to(tmpA[0], tmpA[1]);
     }
     v.glow(this.hue, 1, 0.34 + 0.08 * pulse + 0.14 * od);
-    // Posters ask for a field of faint rings down the tube (depth you can count); play has only the travelling rungs.
-    if (scene.rings) {
+    // A few faint rings stand still down the tube (depth you can count, even between beats); posters ask for a field.
+    const still = scene.rings || (v.quality === 'low' ? null : STILL_RINGS);
+    if (still) {
       v.begin();
-      for (const z of scene.rings) {
+      for (const z of still) {
         if (this.depth(z) < 0.02) continue;
         for (let j = 0; j < bounds; j++) {
           this.B(j, z, tmpA);
@@ -368,7 +396,7 @@ export class View {
           v.to(tmpA[0], tmpA[1]);
         }
       }
-      v.glow(this.hue, 0.8, 0.2);
+      v.glow(this.hue, 0.8, scene.rings ? 0.2 : 0.09 + 0.04 * pulse);
     }
     // Rungs: rings travelling up the tube, one per beat (still and faint in Calm).
     const beatFrac = (w.step % STEPS_PER_BEAT) / STEPS_PER_BEAT + scene.alpha / STEPS_PER_BEAT;
@@ -507,7 +535,7 @@ export class View {
         if (e.dead) continue;
         if (e.type === E.PART) continue;
         const z = e.pz + (e.z - e.pz) * a;
-        const flash = e.flash > 0;
+        const flash = e.flash > 0 && !scene.calm; // Calm: no white blink on a hit
         const b = flash ? 3 : z > 0.66 ? 0 : z > 0.3 ? 1 : 2;
         if (b !== band) continue;
         if (this.depth(z) < -0.02) continue;
@@ -528,6 +556,24 @@ export class View {
       if (any) v.glow(band === 3 ? WHITE : this.hue, band === 3 ? 1.6 : 1.3, [0.55, 0.8, 1, 1.2][band]);
       // The core of each enemy is white: a second, thin pass.
       if (any && band < 3) v.thin(WHITE, 0.9, [0.35, 0.55, 0.75][band]);
+    }
+    // Phosphor streaks: what climbs leaves a short fading trail toward the far end (motion you can read in a still frame).
+    if (v.quality !== 'low') {
+      v.begin();
+      let streaks = false;
+      for (const e of w.enemies) {
+        if (e.dead || e.st !== ST.CLIMB || e.type === E.PART || e.type === E.SPIKER || e.type === E.MINE || e.type === E.SHOT) continue;
+        const z = e.pz + (e.z - e.pz) * a;
+        if (z > 0.96 || z < 0.06 || this.depth(z) < 0) continue;
+        let u = e.lane;
+        const d = e.lane - e.px;
+        if (Math.abs(d) < 2) u = e.px + d * a;
+        this.P(u, z + 0.03, tmpA);
+        this.P(u, Math.min(1, z + 0.12), tmpB);
+        v.line(tmpA[0], tmpA[1], tmpB[0], tmpB[1]);
+        streaks = true;
+      }
+      if (streaks) v.thin(this.hue, 1, 0.22);
     }
     // Ghosts between beats: a dashed, dim outline (never a flicker).
     v.begin();
@@ -810,6 +856,7 @@ export class View {
 
 Object.assign(View.prototype, hazardMethods);
 
+const STILL_RINGS = [0.24, 0.5, 0.76];
 const TIP = [[0, -0.6, 0.5, 0, 0, 0.6, -0.5, 0, 0, -0.6]];
 const ARC = (() => {
   const out = [];

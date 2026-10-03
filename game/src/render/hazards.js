@@ -125,7 +125,7 @@ export const hazardMethods = {
     const f = this.flat;
     const t = scene.t;
     const enter = boss.active ? 1 : Math.min(1, (w.step - boss.enterAt) / Math.max(1, boss.activeAt - boss.enterAt));
-    const flash = boss.parts.some((p) => !p.dead && p.flash > 0);
+    const flash = !scene.calm && boss.parts.some((p) => !p.dead && p.flash > 0);
     // The core: a ring at the far end and a slowly turning star inside it.
     const core = boss.parts.find((p) => !p.dead && p.a === ROLE.CORE && boss.kind !== 'tide');
     if (core) {

@@ -28,6 +28,7 @@ export class Play {
     this.shake = [0, 0];
     this.shakeAmt = 0;
     this.flash = 0;
+    this.flashAt = [0, 0];
     this.lastBeat = -1;
     this.ghostBolts = [];
     this.tetherMine = 0;
@@ -254,7 +255,7 @@ export class Play {
         fx.ring(p[0], p[1], 4, 90, 0.6, WHITE, 18);
         if (mine(ev.id)) {
           music.down(app.fallSound());
-          this.shakeAmt = calm ? 0 : 9;
+          this.shakeAmt = calm ? 0 : 6;
           hud.say('DOWN', { life: 1.5, priority: 4, color: WHITE });
           // What caught you, in a few words (the telegraphs only teach if the fall says what it was).
           const why = CAUSE[DEATH_NAMES[ev.a]];
@@ -291,9 +292,9 @@ export class Play {
       case 'zap': {
         const p = this.at(ev.lane, 0);
         fx.ring(p[0], p[1], 10, Math.max(app.W, app.H) * 0.7, 0.7, WHITE, 32);
-        if (!calm) this.flash = 0.35;
+        if (!calm && this.flash < 0.05) (this.flash = 0.35), (this.flashAt = [p[0], p[1]]);
         music.zap();
-        this.shakeAmt = calm ? 0 : 5;
+        this.shakeAmt = calm ? 0 : 3.5;
         share('z', ev.id, ev.lane);
         break;
       }
@@ -405,7 +406,7 @@ export class Play {
         fx.sparks(p[0], p[1], this.hue, 40, 320, 10);
         hud.say(`${WORLDS[this.zone.world].boss.toUpperCase()} DOWN`, { life: 2.2, priority: 5, color: WHITE });
         music.bossDown();
-        this.shakeAmt = calm ? 0 : 12;
+        this.shakeAmt = calm ? 0 : 8;
         const badge = BOSS_BADGE[WORLDS[this.zone.world].boss];
         if (badge && this.zone.mode !== 'practice') app.award(badge);
         share('b');

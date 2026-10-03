@@ -247,14 +247,21 @@ class App {
     this.buttons.set(buttons);
     this.buttons.draw(vec, this.hue(), this.t, this.calm, platform.touch || this.input.usedTouch);
     if (this.play.flash > 0) {
-      // A zap: one soft wash, never a strobe.
+      // A zap: one soft glow round the ship that fades over a fifth of a second. Never a wash of the whole screen
+      // (a flash may not cover a third of it) and never twice in a row.
       const c = vec.ctx;
+      const r = Math.min(this.W, this.H) * 0.3;
+      const [gx, gy] = this.play.flashAt;
+      const k = Math.min(1, this.play.flash / 0.35);
+      const g = c.createRadialGradient(gx, gy, 0, gx, gy, r);
+      g.addColorStop(0, 'rgba(255,255,255,0.2)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
       c.globalCompositeOperation = 'lighter';
-      c.fillStyle = '#ffffff';
-      c.globalAlpha = Math.min(0.18, this.play.flash * 0.5);
-      c.fillRect(0, 0, this.W, this.H);
+      c.globalAlpha = k;
+      c.fillStyle = g;
+      c.fillRect(gx - r, gy - r, r * 2, r * 2);
       c.globalAlpha = 1;
-      this.play.flash = Math.max(0, this.play.flash - dt * 1.4);
+      this.play.flash = Math.max(0, this.play.flash - dt * 1.8);
     }
     if (!this.started && this.screen !== 'title' && this.screen !== 'closed' && this.screen !== 'connecting' && this.input.take('confirm')) this.press('play');
   }

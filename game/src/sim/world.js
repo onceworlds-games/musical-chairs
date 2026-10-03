@@ -29,6 +29,7 @@ import {
   MULT_CAP,
   OC_BPM,
   CROWD_RESONANCE,
+  MAX_BPM,
   CROWD_TOUGH,
   maxLivesFor,
   CROWD_TOUGH2,
@@ -57,7 +58,7 @@ export class World {
     this.web = makeWeb(zone.shape || world.shapes[0], zone.n);
     this.n = this.web.n;
     this.oc = zone.oc || 0;
-    this.bpm = Math.max(60, Math.min(200, zone.bpm || world.bpm + this.oc * OC_BPM));
+    this.bpm = Math.max(60, Math.min(MAX_BPM, zone.bpm || world.bpm + this.oc * OC_BPM));
     this.dt = stepSeconds(this.bpm);
     const ramp = zone.mode === 'descent' ? descentRamp(zone.depth) : null;
     const pace = ramp ? ramp.pace : world.pace * (1 + 0.02 * Math.max(0, zone.depth || 0));
