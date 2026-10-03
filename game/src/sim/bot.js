@@ -199,7 +199,8 @@ function wrapLane(w, l) {
 }
 
 /** A mod pick for a bot: random, or by a simple preference for builds that clear lanes. */
-const PREFERENCE = ['pierce', 'chain', 'tremolo', 'spread', 'shieldbeat', 'encore', 'metronome', 'echo', 'bassdrop', 'drone', 'staccato', 'phasehop', 'gracenote', 'undertow', 'forte', 'counterpoint'];
+// (Ordered by what the harness measures each mod adds against the final boss.)
+const PREFERENCE = ['metronome', 'pierce', 'echo', 'syncopate', 'tremolo', 'magnet', 'shieldbeat', 'chain', 'spread', 'feedback', 'forte', 'bassdrop', 'counterpoint', 'encore', 'drone', 'phasehop', 'gracenote', 'undertow', 'staccato'];
 export function botPick(options, rng, smart) {
   if (!options.length) return null;
   if (!smart) return options[rng.int(options.length)];
