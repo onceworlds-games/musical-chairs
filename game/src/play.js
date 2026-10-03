@@ -293,6 +293,12 @@ export class Play {
         share('z', ev.id, ev.lane);
         break;
       }
+      case 'nozap':
+        if (mine(ev.id)) {
+          music.denied();
+          hud.say('NO ZAP', { kind: 'small', life: 0.7 });
+        }
+        break;
       case 'zapask':
         if (mine(ev.id) && !w.auth) {
           s.pendingZap = true;

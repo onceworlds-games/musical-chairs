@@ -292,7 +292,7 @@ export const MODS = [
   { key: 'bassdrop', name: 'BASS DROP', max: 2, tag: 'KILLS RECHARGE ZAP' },
   { key: 'forte', name: 'FORTE', max: 2, tag: 'WIDER ZAP' },
   { key: 'shieldbeat', name: 'SHIELD BEAT', max: 2, tag: 'A SHIELD NOW AND THEN' },
-  { key: 'encore', name: 'ENCORE', max: 1, tag: 'ONE MORE SHIP' },
+  { key: 'encore', name: 'ENCORE', max: 1, tag: 'A SHIP, SLOWER RESONANCE' },
   { key: 'undertow', name: 'UNDERTOW', max: 2, tag: 'SLOW THE NEAR END' },
   { key: 'rimguard', name: 'RIM GUARD', max: 1, tag: 'A SPARK EVERY 2 BARS' },
   { key: 'resonator', name: 'RESONATOR', max: 2, tag: 'FASTER RESONANCE' },

@@ -355,8 +355,9 @@ export function lead(e, t, note, vel = 1, pan = 0) {
     dest = p;
   }
   const g = e.gain(0, dest);
-  e.env(g, t, 0.003, 0.1 * vel, 0.14);
-  const f = mtof(note);
+  e.env(g, t, 0.003, 0.14 * vel, 0.14);
+  // A few cents either way: never quite the same blip twice.
+  const f = mtof(note) * (1 + (Math.random() - 0.5) * 0.006);
   e.osc('triangle', f, t, t + 0.18, g);
   e.osc('sawtooth', f * 2, t, t + 0.06, e.gain(0.16, g));
   g.connect(e.gain(0.25, e.delay));

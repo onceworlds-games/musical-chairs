@@ -52,8 +52,10 @@ export const shipMethods = {
     }
     if (input.zap) {
       input.zap = false;
-      if (this.auth) this.zap(ship);
-      else if (ship.zaps > 0) this.event('zapask', ship.idx, laneOf(this.web, ship.u));
+      // No charge left: the press still answers (a dull note and a word).
+      if (ship.zaps <= 0) this.event('nozap', ship.idx, laneOf(this.web, ship.u));
+      else if (this.auth) this.zap(ship);
+      else this.event('zapask', ship.idx, laneOf(this.web, ship.u));
     }
     this.fireControl(ship);
     if (this.phase !== PHASE.WARP) this.contact(ship);
@@ -171,12 +173,12 @@ export const shipMethods = {
     const phase = (((this.step - ship.lat) % STEPS_PER_BEAT) + STEPS_PER_BEAT) % STEPS_PER_BEAT;
     const onBeat = phase <= 3 || phase >= STEPS_PER_BEAT - 3;
     const offBeat = Math.abs(phase - STEPS_PER_BEAT / 2) <= 3;
-    let dmg = def.dmg * (mod(ship, 'tremolo') ? 0.75 : 1);
+    let dmg = def.dmg * (mod(ship, 'tremolo') ? 0.68 : 1);
     let pierce = mod(ship, 'pierce') + (def.pierceAll ? 99 : 0) + (this.overdrive ? 1 : 0);
     let speed = def.speed * (1 + 0.25 * mod(ship, 'staccato'));
     const met = mod(ship, 'metronome');
     const syn = mod(ship, 'syncopate');
-    if (met && onBeat) dmg += met >= 2 ? 1.25 : 0.75;
+    if (met && onBeat) dmg += met >= 2 ? 1 : 0.6;
     if (syn && offBeat) (dmg += syn >= 2 ? 0.75 : 0.5), (speed *= 1.25);
     const opts = { dmg, pierce, speed, kind: 0, range: def.range };
     if (def.tines) {

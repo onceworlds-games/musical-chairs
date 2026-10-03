@@ -208,6 +208,9 @@ class App {
 
   step(dt) {
     const s = this.session;
+    // The window moved to a screen with another pixel density (no resize event says so).
+    const pr = platform.pixelRatio(2);
+    if (Math.abs(pr - this.vec.pr) > 0.01) this.resize();
     s.screen = this.screenCode();
     s.update();
     const prev = this.screen;

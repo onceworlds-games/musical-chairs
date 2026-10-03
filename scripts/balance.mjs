@@ -9,7 +9,8 @@ import { MODS, SHIPS } from '../game/src/sim/data.js';
 
 const args = process.argv.slice(2);
 const quick = args.includes('quick');
-const want = args.filter((a) => a !== 'quick');
+const onlyMods = (args.find((a) => a.startsWith('only=')) || '').slice(5).split(',').filter(Boolean);
+const want = args.filter((a) => a !== 'quick' && !a.startsWith('only='));
 const on = (name) => !want.length || want.includes(name);
 const N = quick ? 60 : 300;
 const pct = (x) => `${(100 * x).toFixed(0)}%`.padStart(5);
@@ -96,7 +97,7 @@ if (on('mods')) {
   row('MOD IMPACT (expert, final boss)', 'without', 'with max', 'delta');
   const deltas = [];
   for (const m of MODS) {
-    if (m.coop) continue;
+    if (m.coop || (onlyMods.length && !onlyMods.includes(m.key))) continue;
     const base = rate([m.key], {});
     const with_ = rate([m.key], { [m.key]: m.max });
     deltas.push([m.key, with_ - base]);
@@ -104,7 +105,7 @@ if (on('mods')) {
   }
   deltas.sort((a, b) => b[1] - a[1]);
   console.log('  strongest:', deltas.slice(0, 5).map(([k, d]) => `${k} ${(100 * d).toFixed(0)}`).join(', '));
-  const top = deltas.slice(0, 5).map(([k]) => k);
+  const top = onlyMods.length ? onlyMods : deltas.slice(0, 5).map(([k]) => k);
   row('PAIRS (strongest singles)', 'without', 'with both', 'delta');
   for (let i = 0; i < top.length; i++) {
     for (let j = i + 1; j < top.length; j++) {
