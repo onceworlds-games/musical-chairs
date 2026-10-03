@@ -91,7 +91,6 @@
       "action": "Start or ready in the lobby"
     }
   ],
-  "help": "Shoot what climbs the lanes before it reaches the rim. Two kills in a beat raise the multiplier; three lanes on one beat make a chord. Fill Resonance for Overdrive. Hop on the beat for more. Pulsars burn their lane on the bar line; shoot spikes before the warp. Pick a mod after every zone. Friends share ships and can revive you.",
   "badges": [
     {
       "id": "first-zone",
