@@ -12,7 +12,8 @@ const quick = args.includes('quick');
 const onlyMods = (args.find((a) => a.startsWith('only=')) || '').slice(5).split(',').filter(Boolean);
 const pairList = (args.find((a) => a.startsWith('pairs=')) || '').slice(6).split(',').filter(Boolean);
 const sized = Number((args.find((a) => a.startsWith('n=')) || '').slice(2)) || 0;
-const want = args.filter((a) => a !== 'quick' && !a.startsWith('only=') && !a.startsWith('n=') && !a.startsWith('pairs='));
+const crewOnly = Number((args.find((a) => a.startsWith('players=')) || '').slice(8)) || 0;
+const want = args.filter((a) => a !== 'quick' && !a.startsWith('only=') && !a.startsWith('n=') && !a.startsWith('pairs=') && !a.startsWith('players='));
 const on = (name) => !want.length || want.includes(name);
 const N = quick ? 60 : 300;
 const pct = (x) => `${(100 * x).toFixed(0)}%`.padStart(5);
@@ -151,7 +152,7 @@ if (on('coop')) {
   const n = sized || (quick ? 40 : 120);
   const rungs = [0, 3, 6];
   row('CO-OP (average, run clear)', ...rungs.map((oc) => `OC ${oc}`), 'W3 at OC 0');
-  for (const players of [1, 2, 3, 4]) {
+  for (const players of crewOnly ? [crewOnly] : [1, 2, 3, 4]) {
     const cells = [];
     let w3 = 0;
     for (const oc of rungs) {
