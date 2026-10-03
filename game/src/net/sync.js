@@ -107,7 +107,7 @@ export function clean(raw, n) {
     mu: int(raw.mu, 1, 12, 1),
     re: num(raw.re, 0, 1000, 0) / 10,
     od: int(raw.od, 0, 100000, 0),
-    lv: int(raw.lv, 0, 9, 0),
+    lv: int(raw.lv, 0, 12, 0),
     e,
     sp,
     pk: Array.isArray(raw.pk) ? raw.pk.slice(0, 40).map((x) => num(x, -1e7, 1e7, 0)) : [],

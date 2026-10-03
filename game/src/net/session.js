@@ -10,7 +10,7 @@ import { World, PHASE } from '../sim/world.js';
 import { spawnEnemy } from '../sim/enemies.js';
 import { makeBoss } from '../sim/bosses.js';
 import { zoneFor, zoneCount, draftOptions, cleanMods, addMod, dailyFor, dayOf, MODES, TEMPOS, clampInt, zoneLabel } from '../sim/run.js';
-import { SHIPS, SHIP, WORLDS, MODS, LEVELS_PER_WORLD } from '../sim/data.js';
+import { SHIPS, SHIP, WORLDS, MODS, LEVELS_PER_WORLD, startLives } from '../sim/data.js';
 import { encode, clean, apply, batch, readBatch } from './sync.js';
 import { laneOf, laneDist } from '../sim/web.js';
 
@@ -63,7 +63,7 @@ export function cleanRun(raw) {
     idx: clampInt(raw.idx, 0, 9999, 0),
     status: ['play', 'draft', 'over'].includes(raw.status) ? raw.status : 'over',
     mid: str(raw.mid, 80),
-    lives: clampInt(raw.lives, 0, SHIP.maxLives + 2, 0),
+    lives: clampInt(raw.lives, 0, SHIP.maxLives + 6, 0),
     score: clampInt(raw.score, 0, 99_999_999, 0),
     mult: clampInt(raw.mult, 1, 12, 1),
     res: clampInt(raw.res, 0, 100, 0),
@@ -340,6 +340,7 @@ export class Session {
       }
       p.n = str(player?.name, 24) || p.n;
     }
+    if (!prev) run.lives = startLives(run.oc, roster.length); // a crew shares more ships than one pilot
     run.roster = roster;
     run.mid = m.id;
     run.status = 'play';
@@ -360,7 +361,7 @@ export class Session {
     const offered = draftOptions(run, id, run.idx - 1, p.mods, coop);
     if (!offered.includes(pick.m)) return true; // a pick that was never offered is refused, not waited for
     p.mods = addMod(p.mods, pick.m);
-    if (pick.m === 'encore') run.lives = Math.min(SHIP.maxLives + 2, run.lives + 1);
+    if (pick.m === 'encore') run.lives = Math.min(SHIP.maxLives + 6, run.lives + 1);
     return true;
   }
 
