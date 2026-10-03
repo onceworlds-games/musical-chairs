@@ -29,6 +29,7 @@ import {
   MULT_CAP,
   OC_BPM,
   stepSeconds,
+  descentRamp,
 } from './data.js';
 import { spawnEnemy, updateEnemy, hitLane, S } from './enemies.js';
 import { makeBoss, updateBoss, bossDamage } from './bosses.js';
@@ -54,11 +55,14 @@ export class World {
     this.oc = zone.oc || 0;
     this.bpm = Math.max(60, Math.min(200, zone.bpm || world.bpm + this.oc * OC_BPM));
     this.dt = stepSeconds(this.bpm);
-    this.pace = world.pace * (1 + 0.02 * Math.max(0, zone.depth || 0)) * (zone.practicePace || 1);
-    this.flipEvery = world.pace >= 1.15 ? 3 : 4; // ticks between a climbing flipper's turns
-    this.shotChance = zone.guided || (zone.world === 0 && zone.level === 1) ? 0 : Math.min(0.35, (world.shots || 0) * (this.oc >= 2 ? 1.8 : 1) * (zone.level >= 3 ? 1.2 : 1));
+    const ramp = zone.mode === 'descent' ? descentRamp(zone.depth) : null;
+    const pace = ramp ? ramp.pace : world.pace * (1 + 0.02 * Math.max(0, zone.depth || 0));
+    this.pace = pace * (zone.practicePace || 1);
+    this.flipEvery = pace >= 1.15 ? 3 : 4; // ticks between a climbing flipper's turns
+    const first = !ramp && zone.world === 0 && zone.level === 1;
+    this.shotChance = zone.guided || first ? 0 : Math.min(0.35, ((ramp ? ramp.shots : world.shots) || 0) * (this.oc >= 2 ? 1.8 : 1) * (zone.level >= 3 ? 1.2 : 1));
     // Deeper worlds' enemies take more hitting (fractions matter: 1.25 needs two plain bolts, or one heavy one).
-    this.tough = (world.tough || 1) + 0.03 * Math.max(0, zone.depth || 0);
+    this.tough = ramp ? ramp.tough : (world.tough || 1) + 0.03 * Math.max(0, zone.depth || 0);
     this.rng = new Rng(hash32('sim', zone.seed, zone.world, zone.level, zone.depth || 0));
     zone.n = this.n;
     zone.closed = this.web.closed;

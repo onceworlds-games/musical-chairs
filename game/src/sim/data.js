@@ -240,6 +240,21 @@ export const WORLDS = [
 export const RUN_WORLDS = 6;
 export const LEVELS_PER_WORLD = 4; // three zones and a boss
 
+/**
+ * The Descent's own climb. It starts as gently as the first world and every zone adds a little; the worlds down
+ * there only lend their shapes, colour, music and boss. Toughness steps a world at a time (fractions decide hits).
+ */
+export function descentRamp(depth) {
+  const d = Math.max(0, depth || 0);
+  const g = Math.floor(d / LEVELS_PER_WORLD);
+  return {
+    pace: Math.min(2, 1 + 0.035 * d),
+    tough: g < 6 ? [1, 1, 1.5, 2, 2, 2][g] : Math.min(3.5, 2 + 0.25 * (g - 5)),
+    budget: 44 + 5 * d,
+    shots: Math.min(0.3, 0.05 + 0.01 * d),
+  };
+}
+
 // secs: how long a lone Plectrum firing without a miss needs to bring it down (its HP scales with the tempo).
 export const BOSSES = {
   hydra: { name: 'HYDRA', secs: 30 },
@@ -254,10 +269,10 @@ export const BOSSES = {
 // rate: ticks between bolts (1 = sixteenths). dmg per bolt. speed in z/s. range: where bolts fade (1 = the far end).
 export const SHIPS = [
   { key: 'plectrum', name: 'PLECTRUM', rate: 1, dmg: 1, speed: 1.6, range: 1, tag: 'STEADY SIXTEENTHS' },
-  { key: 'mallet', name: 'MALLET', rate: 2, dmg: 1.1, speed: 2.1, range: 0.7, spread: 1, tag: 'THREE LANES, CLOSE' },
-  { key: 'reed', name: 'REED', rate: 1, dmg: 0.95, speed: 1.45, range: 1, homing: 1, tag: 'NOTES THAT SEEK' },
-  { key: 'bow', name: 'BOW', rate: 2, dmg: 2.3, speed: 2.7, range: 1, pierceAll: 1, tag: 'A BEAM THAT PIERCES' },
-  { key: 'chime', name: 'CHIME', rate: 2, dmg: 1.4, speed: 1.7, range: 1, drones: 2, tag: 'DRONES PLAY ALONG' },
+  { key: 'mallet', name: 'MALLET', rate: 2, dmg: 1.2, speed: 2.1, range: 0.7, spread: 1, tag: 'THREE LANES, CLOSE' },
+  { key: 'reed', name: 'REED', rate: 1, dmg: 0.9, speed: 1.45, range: 1, homing: 1, tag: 'NOTES THAT SEEK' },
+  { key: 'bow', name: 'BOW', rate: 2, dmg: 2.5, speed: 2.7, range: 1, pierceAll: 1, tag: 'A BEAM THAT PIERCES' },
+  { key: 'chime', name: 'CHIME', rate: 2, dmg: 1.55, speed: 1.7, range: 1, drones: 2, tag: 'DRONES PLAY ALONG' },
   { key: 'fork', name: 'FORK', rate: 2, dmg: 1.45, speed: 1.7, range: 1, tines: 1, tag: 'TWO TINES, ONE HUM' },
 ];
 

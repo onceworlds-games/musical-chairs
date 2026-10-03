@@ -3,7 +3,7 @@
 // budget on motifs (a single note, an arpeggio up the lanes, a chord across the web, a mirrored pair, a choir).
 // The result is checked before it is used: lanes in range, ticks in order, no two spawns on one lane and tick.
 import { Rng, hash32 } from './rng.js';
-import { E, ENEMIES, WORLDS, COUNTIN_BARS, STANZA_BARS, STANZAS, TICKS_PER_BAR, OC_BUDGET, BOSS_BARS } from './data.js';
+import { E, ENEMIES, WORLDS, COUNTIN_BARS, STANZA_BARS, STANZAS, TICKS_PER_BAR, OC_BUDGET, BOSS_BARS, descentRamp } from './data.js';
 
 const PHRASES = [
   [0.5, 1, 1, 1.5, 0.6, 1, 1.4, 2],
@@ -21,9 +21,10 @@ export function stanzaBudget(zone, stanza) {
   const lvl = zone.level >= 4 && zone.world === 5 ? 0.9 : LEVEL_MUL[Math.min(3, Math.max(0, zone.level - 1))];
   const st = STANZA_MUL[Math.min(2, Math.max(0, stanza))];
   const oc = 1 + OC_BUDGET * (zone.oc || 0);
-  const depth = 1 + 0.05 * Math.max(0, zone.depth || 0); // the Descent keeps adding
-  const guided = zone.guided ? 0.6 : zone.world === 0 && zone.level === 1 && !zone.depth ? 0.65 : 1;
-  return world.budget * lvl * st * oc * depth * guided * (zone.density || 1);
+  // The Descent climbs on its own ramp; the Daily's later worlds add a little.
+  const base = zone.mode === 'descent' ? descentRamp(zone.depth).budget : world.budget * (1 + 0.05 * Math.max(0, zone.depth || 0));
+  const guided = zone.guided ? 0.6 : zone.mode !== 'descent' && zone.world === 0 && zone.level === 1 && !zone.depth ? 0.65 : 1;
+  return base * lvl * st * oc * guided * (zone.density || 1);
 }
 
 function poolFor(zone) {

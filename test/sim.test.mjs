@@ -7,7 +7,7 @@ import { Rng, hash32 } from '../game/src/sim/rng.js';
 import { makeWeb, SHAPES, laneDelta, laneOf, wrapU, opposite } from '../game/src/sim/web.js';
 import { buildZone, validateZone } from '../game/src/sim/levelgen.js';
 import { zoneFor, draftOptions, cleanMods, dailyFor, zoneCount, addMod } from '../game/src/sim/run.js';
-import { E, MODS, SHIPS, WORLDS, STEPS_PER_BAR, STEPS_PER_BEAT } from '../game/src/sim/data.js';
+import { E, MODS, SHIPS, WORLDS, STEPS_PER_BAR, STEPS_PER_BEAT, descentRamp } from '../game/src/sim/data.js';
 import { spawnEnemy, S } from '../game/src/sim/enemies.js';
 import { playRun } from '../game/src/sim/headless.js';
 
@@ -412,4 +412,17 @@ test('headless runs finish and report sane numbers', () => {
     assert.ok(r.seconds > 30);
     for (const z of r.zones) assert.ok(!z.stuck);
   }
+});
+
+test('the Descent starts as gently as the first world and only climbs', () => {
+  const first = new World({ zone: { ...zoneFor({ mode: 'descent', seed: 9 }, 0) }, players: [{ id: 'a', ship: 0 }] });
+  assert.equal(first.tough, 1);
+  assert.ok(first.pace <= 1.01);
+  let prev = descentRamp(0);
+  for (let d = 1; d < 80; d++) {
+    const r = descentRamp(d);
+    for (const k of ['pace', 'tough', 'budget', 'shots']) assert.ok(r[k] >= prev[k] && Number.isFinite(r[k]), `${k} at depth ${d}`);
+    prev = r;
+  }
+  assert.ok(descentRamp(12).tough === 2 && descentRamp(79).tough <= 3.5);
 });
