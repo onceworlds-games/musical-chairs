@@ -75,7 +75,8 @@ No build step: plain ES modules and Canvas 2D, served from `game/`.
   match clock, synthesized drums, bass, pads, arps and the player's notes (`engine.js`, `music.js`).
 - `game/src/net/` holds the room and the run record (`session.js`) and the snapshots and batches (`sync.js`).
 - `game/src/ui/` the screens, `input.js` every way to play, `platform.js` the only place the platform's SDK is called.
-- `test/` runs with `node --test`; `scripts/` holds the balance harness, the store capture and a static server.
+- `test/` runs with `node --test`; `scripts/` holds the balance harness, the smoke test, the store capture and a static
+  server.
 
 ## Running it
 
@@ -83,6 +84,7 @@ No build step: plain ES modules and Canvas 2D, served from `game/`.
 npm run dev       # http://localhost:5173: the game alone, without the platform
 npm test          # the simulation, saves, snapshots and the run's lifecycle
 npm run balance   # the balance harness (or: node scripts/balance.mjs quick survival final ships mods)
+npm run smoke     # headless Chrome plays a zone from the title to the draft, desktop and phone; fails on any error
 npm run store     # store art and badge icons from the game's own ?poster= scenes
 ```
 
