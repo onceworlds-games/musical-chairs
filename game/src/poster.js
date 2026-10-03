@@ -108,10 +108,11 @@ const TOGETHER = {
   world: 3,
   shape: 'heptagon',
   ships: [0, 5],
-  shipLanes: [-1, 1],
+  shipLanes: [0, 1],
   stretch: 1.55,
   t0: 0,
-  header: 0.025,
+  header: 0.03,
+  footer: 0.1,
   rings: [0.1, 0.2, 0.32, 0.46, 0.62, 0.8],
   trails: true,
   bloom: true,
@@ -133,7 +134,7 @@ const TOGETHER = {
     [E.FLIPPER, 14, 0.2],
   ],
   pulses: [9],
-  bolts: [[-1, 0.15], [-1, 0.35], [1, 0.22], [1, 0.42], [1, 0.6]],
+  bolts: [[0, 0.15], [0, 0.35], [1, 0.22], [1, 0.42], [1, 0.6]],
   chord: [-5, 5, 9],
   chordDepths: [0.4, 0.34, 0.5],
   tether: true,
@@ -154,7 +155,7 @@ function thumb(vec, W, H, o) {
   const view = new View(vec, fx);
   if (o.stretch) view.maxStretch = o.stretch;
   view.setWeb(w.web, def.hue, false);
-  view.layout(W, H, H * (o.header || 0.03), H * 0.05);
+  view.layout(W, H, H * (o.header || 0.03), H * (o.footer || 0.05));
   view.minSize = Math.max(9, H / 55);
   const n = w.n;
   const at = (off) => (((w.web.start + off) % n) + n) % n;
