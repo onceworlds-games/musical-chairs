@@ -70,6 +70,7 @@ export function cleanRun(raw) {
     roster: Array.isArray(raw.roster) ? raw.roster.filter((x) => typeof x === 'string' && players[x]).slice(0, 4) : [],
     players,
     guided: raw.guided === true,
+    coop: raw.coop === 1 ? 1 : 0,
     daily: null,
     practice: null,
     result: null,
@@ -122,6 +123,7 @@ export class Session {
     this.joining = false;
     this.ending = null; // the mid the host has asked to end
     this.recorded = new Set();
+    this.latePicks = new Set();
   }
 
   // ---------------------------------------------------------------- joining
@@ -201,6 +203,8 @@ export class Session {
     const room = this.room;
     if (!room || this.closed) return;
     this.reconcile();
+    if (this.isHost) this.lateParks();
+    else this.adoptMods();
     const now = performance.now();
     if (now - this.presenceAt > PRESENCE_MS) {
       this.presenceAt = now;
@@ -330,15 +334,9 @@ export class Session {
         if (daily) for (const k of daily.mods) p.mods = addMod(p.mods, k);
         run.players[id] = p;
       } else if (prev) {
-        // Their pick from the draft (checked against what they were offered).
-        const key = `${run.rid}.${run.idx}`;
-        if (pick && pick.k === key && typeof pick.m === 'string') {
-          const offered = draftOptions(run, id, run.idx - 1, p.mods, coopBefore);
-          if (offered.includes(pick.m)) {
-            p.mods = addMod(p.mods, pick.m);
-            if (pick.m === 'encore') run.lives = Math.min(SHIP.maxLives + 2, run.lives + 1);
-          }
-        }
+        // Their pick from the draft (checked against what they were offered). One that has not arrived yet is
+        // taken during the count-in (lateParks).
+        if (!this.applyPick(run, id, p, pick, coopBefore)) this.latePicks.add(id);
       }
       p.n = str(player?.name, 24) || p.n;
     }
@@ -346,12 +344,52 @@ export class Session {
     run.mid = m.id;
     run.status = 'play';
     run.result = null;
+    run.coop = coopBefore ? 1 : 0;
     this.writeRun(run);
     try {
       room.setState('snap', null);
     } catch {}
     this.evq = [];
     this.lastSeenSeq = -1;
+  }
+
+  /** A player's draft pick for the zone about to play, if it is one they were offered. Returns true when taken. */
+  applyPick(run, id, p, pick, coop) {
+    const key = `${run.rid}.${run.idx}`;
+    if (!pick || pick.k !== key || typeof pick.m !== 'string') return false;
+    const offered = draftOptions(run, id, run.idx - 1, p.mods, coop);
+    if (!offered.includes(pick.m)) return true; // a pick that was never offered is refused, not waited for
+    p.mods = addMod(p.mods, pick.m);
+    if (pick.m === 'encore') run.lives = Math.min(SHIP.maxLives + 2, run.lives + 1);
+    return true;
+  }
+
+  /** Host, during a zone's count-in: picks that reached the room after the zone began still count. */
+  lateParks() {
+    if (!this.latePicks.size || !this.world || !this.world.auth) return;
+    const w = this.world;
+    if (w.phase !== PHASE.COUNTIN) {
+      this.latePicks.clear();
+      return;
+    }
+    const run = this.run;
+    if (!run || run.mid !== this.worldMid) return;
+    for (const id of [...this.latePicks]) {
+      const p = run.players[id];
+      if (!p) {
+        this.latePicks.delete(id);
+        continue;
+      }
+      const before = JSON.stringify(p.mods);
+      if (!this.applyPick(run, id, p, this.pickOf(id), run.coop === 1)) continue;
+      this.latePicks.delete(id);
+      if (JSON.stringify(p.mods) === before) continue;
+      const ship = w.ships.find((x) => x.id === id);
+      if (ship) ship.mods = { ...p.mods };
+      w.undertow = Math.max(0, ...w.ships.map((x) => x.mods.undertow || 0));
+      w.lives = run.lives = Math.max(w.lives, run.lives);
+      this.writeRun(run);
+    }
   }
 
   pickOf(id) {
@@ -504,6 +542,17 @@ export class Session {
     w.replaying = false;
     if (this.meIdx >= 0) w.ev = w.ev.filter((e) => e.k === 'down' || e.k === 'fire' || e.k === 'hop');
     else w.ev.length = 0;
+  }
+
+  /** A mirror's own ship takes a pick the host applied late (during the count-in). */
+  adoptMods() {
+    const w = this.world;
+    if (!w || w.auth || this.meIdx < 0 || w.phase !== PHASE.COUNTIN) return;
+    const run = this.run;
+    const mine = run?.players?.[this.room.me.id];
+    if (!mine || run.mid !== this.worldMid) return;
+    const ship = w.ships[this.meIdx];
+    if (JSON.stringify(ship.mods) !== JSON.stringify(mine.mods)) ship.mods = { ...mine.mods };
   }
 
   /** Host: the zone as it is now, for everyone else. */

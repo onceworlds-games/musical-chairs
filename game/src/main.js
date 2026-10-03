@@ -667,7 +667,11 @@ class App {
         return;
       }
       case 'mod':
-        if (s.pickMod(arg)) this.music.pick();
+        if (s.pickMod(arg)) {
+          this.music.pick();
+          // Alone, the pick is the go: the next zone starts (with friends the host waits for their picks).
+          if (s.isHost && s.solo) setTimeout(() => s.start(), 450);
+        }
         return;
       case 'invite':
         platform.showInvite();

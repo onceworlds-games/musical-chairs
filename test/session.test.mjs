@@ -178,3 +178,28 @@ test('a zone that just ended is not restarted while its match closes', async () 
   assert.equal(s.run.result.cause, 1);
 });
 
+
+test('a pick that reaches the room after the zone began still counts in the count-in', async () => {
+  const s = new Session(app());
+  await s.connect();
+  s.start();
+  await tick();
+  s.update();
+  playOut(s);
+  s.finishZone();
+  await tick();
+  s.update();
+  const run = s.run;
+  const options = draftOptions(run, s.room.me.id, 0, {}, false);
+  // Start first; the pick lands a moment later.
+  s.start();
+  await tick();
+  s.update();
+  assert.deepEqual(s.run.players[s.room.me.id].mods, {});
+  s.pickedKey = `${run.rid}.${run.idx}`;
+  s.pickedMod = options[0];
+  s.writePick();
+  s.update();
+  assert.equal(s.run.players[s.room.me.id].mods[options[0]], 1);
+  assert.equal(s.world.ships[0].mods[options[0]], 1);
+});
