@@ -7,7 +7,7 @@ import { Rng, hash32 } from '../game/src/sim/rng.js';
 import { makeWeb, SHAPES, laneDelta, laneOf, wrapU, opposite } from '../game/src/sim/web.js';
 import { buildZone, validateZone } from '../game/src/sim/levelgen.js';
 import { zoneFor, draftOptions, cleanMods, dailyFor, zoneCount, addMod } from '../game/src/sim/run.js';
-import { E, MODS, SHIPS, WORLDS, STEPS_PER_BAR, STEPS_PER_BEAT, MAX_BPM, descentRamp, startLives, maxLivesFor } from '../game/src/sim/data.js';
+import { E, MODS, SHIPS, WORLDS, STEPS_PER_BAR, STEPS_PER_BEAT, COUNTIN_BARS, SHIELD_BARS, MAX_BPM, descentRamp, startLives, maxLivesFor } from '../game/src/sim/data.js';
 import { spawnEnemy, S } from '../game/src/sim/enemies.js';
 import { playRun } from '../game/src/sim/headless.js';
 
@@ -505,6 +505,22 @@ test('the Descent starts as gently as the first world and only climbs', () => {
     prev = r;
   }
   assert.ok(descentRamp(12).tough === 2 && descentRamp(79).tough <= 3.5);
+});
+
+test('Shield Beat: a shield as play begins, and another a few bars after it breaks', () => {
+  const w = new World({ zone: zone(), players: [{ id: 'a', ship: 0, mods: { shieldbeat: 1 } }] });
+  w.spawns = [];
+  assert.equal(w.ships[0].shield, false);
+  while (w.bar < COUNTIN_BARS + 1) w.update();
+  assert.equal(w.ships[0].shield, true, 'ready when the zone starts');
+  const ship = w.ships[0];
+  ship.inv = 0;
+  w.down(ship, 1);
+  assert.equal(ship.state, 'live', 'the shield took the fall');
+  assert.equal(ship.shield, false);
+  while (!ship.shield && w.bar < COUNTIN_BARS + 40) w.update();
+  assert.ok(ship.shield, 'and it forms again');
+  assert.ok(w.bar - COUNTIN_BARS <= SHIELD_BARS[0] + 1);
 });
 
 test('comfort: no tempo in any mode, zone, Overclock or practice speed beats faster than three times a second', () => {

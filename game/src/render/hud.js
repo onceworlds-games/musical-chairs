@@ -113,7 +113,8 @@ export class Hud {
     if (d.boss) {
       const bw = Math.min(W * 0.46, 360);
       const bx = W / 2 - bw / 2;
-      const by = pad + (small ? 30 : 36);
+      // On a narrow screen the bar drops below the platform's buttons (the top left 130 x 56 px belong to them).
+      const by = W < 440 ? 68 : pad + (small ? 30 : 36);
       const k = Math.max(0, Math.min(1, d.boss.hp / Math.max(1, d.boss.max)));
       v.text(d.boss.name, W / 2, by - (small ? 13 : 15), small ? 8 : 10, WHITE, 0.5, 0.7);
       v.begin();

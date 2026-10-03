@@ -30,6 +30,7 @@ import {
   OC_BPM,
   CROWD_RESONANCE,
   MAX_BPM,
+  SHIELD_BARS,
   CROWD_TOUGH,
   maxLivesFor,
   CROWD_TOUGH2,
@@ -326,10 +327,10 @@ export class World {
     this.barRim = 0;
     this.barHit = 0;
     this.barFirstKill.clear();
-    // Shield Beat: a shield forms every 8 bars (4 with two).
+    // Shield Beat: a shield forms as play begins and again every SHIELD_BARS bars (a few fewer with two).
     for (const ship of this.ships) {
       const sb = mod(ship, 'shieldbeat');
-      if (sb && this.bar % (sb >= 2 ? 24 : 32) === 0 && this.bar > 0 && !ship.shield) {
+      if (sb && this.bar >= COUNTIN_BARS && (this.bar - COUNTIN_BARS) % (sb >= 2 ? SHIELD_BARS[1] : SHIELD_BARS[0]) === 0 && !ship.shield) {
         ship.shield = true;
         this.event('shield', ship.idx, laneOf(this.web, ship.u));
       }

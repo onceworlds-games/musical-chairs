@@ -10,8 +10,9 @@ import { MODS, SHIPS } from '../game/src/sim/data.js';
 const args = process.argv.slice(2);
 const quick = args.includes('quick');
 const onlyMods = (args.find((a) => a.startsWith('only=')) || '').slice(5).split(',').filter(Boolean);
+const pairList = (args.find((a) => a.startsWith('pairs=')) || '').slice(6).split(',').filter(Boolean);
 const sized = Number((args.find((a) => a.startsWith('n=')) || '').slice(2)) || 0;
-const want = args.filter((a) => a !== 'quick' && !a.startsWith('only=') && !a.startsWith('n='));
+const want = args.filter((a) => a !== 'quick' && !a.startsWith('only=') && !a.startsWith('n=') && !a.startsWith('pairs='));
 const on = (name) => !want.length || want.includes(name);
 const N = quick ? 60 : 300;
 const pct = (x) => `${(100 * x).toFixed(0)}%`.padStart(5);
@@ -98,15 +99,16 @@ if (on('mods')) {
   row('MOD IMPACT (expert, final boss)', 'without', 'with max', 'delta');
   const deltas = [];
   for (const m of MODS) {
-    if (m.coop || (onlyMods.length && !onlyMods.includes(m.key))) continue;
+    if (m.coop || pairList.length || (onlyMods.length && !onlyMods.includes(m.key))) continue;
     const base = rate([m.key], {});
     const with_ = rate([m.key], { [m.key]: m.max });
     deltas.push([m.key, with_ - base]);
     row(`  ${m.name}`, pct(base), pct(with_), `${with_ - base >= 0 ? '+' : ''}${(100 * (with_ - base)).toFixed(0)}`);
   }
   deltas.sort((a, b) => b[1] - a[1]);
-  console.log('  strongest:', deltas.slice(0, 5).map(([k, d]) => `${k} ${(100 * d).toFixed(0)}`).join(', '));
-  const top = deltas.slice(0, 5).map(([k]) => k);
+  if (deltas.length) console.log('  strongest:', deltas.slice(0, 5).map(([k, d]) => `${k} ${(100 * d).toFixed(0)}`).join(', '));
+  const top = pairList.length ? pairList : deltas.slice(0, 5).map(([k]) => k);
+  if (onlyMods.length && !pairList.length) top.length = 0; // a chunk of singles: the pairs are run on their own (pairs=a,b,c)
   row('PAIRS (strongest singles)', 'without', 'with both', 'delta');
   for (let i = 0; i < top.length; i++) {
     for (let j = i + 1; j < top.length; j++) {

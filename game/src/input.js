@@ -30,6 +30,7 @@ export class Input {
     this.autofire = false;
     this.usedTouch = false;
     this.lastDevice = 'keys';
+    this.lastT = 0;
     this.lastU = null; // where the ship was on the last frame (a jump means a hop or a respawn moved it)
     this.pad = { active: false, prev: new Set(), lane: null, idx: -1 };
     this.padOk = typeof navigator !== 'undefined' && typeof navigator.getGamepads === 'function';
@@ -270,7 +271,9 @@ export class Input {
     if (this.lastU !== null) {
       let d = ship.u - this.lastU;
       if (web.closed) d = (((d % web.n) + web.n * 1.5) % web.n) - web.n / 2;
-      if (Math.abs(d) > 1.6) {
+      // Running flat out covers 14 lanes a second: only more than that in the time since the last frame is a jump.
+      const run = 14 * Math.min(0.5, (now - this.lastT) / 1000) * 1.4;
+      if (Math.abs(d) > Math.max(1.6, run)) {
         moved = true;
         if (this.kbTarget !== null) this.kbTarget = Math.round(ship.u);
         this.touchU = ship.u;
@@ -278,6 +281,7 @@ export class Input {
       }
     }
     this.lastU = ship.u;
+    this.lastT = now;
     // Keys: keep running while held.
     if (this.kbDir && this.held(this.kbDir < 0 ? LEFT : RIGHT) && now - this.kbSince > 110) {
       const d = this.kbTarget - ship.u;

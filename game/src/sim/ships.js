@@ -1,7 +1,7 @@
 // The ships' side of a zone, mixed into World: moving round the rim, firing on the grid, bolts and what they hit,
 // hops and zaps, getting caught, coming back. Methods run with `this` as the World.
 import { laneOf, wrapU, laneDelta, laneDist, opposite, neighbour } from './web.js';
-import { E, SHIP, STEPS_PER_TICK, STEPS_PER_BEAT, STEPS_PER_BAR, WARP_BARS, REVIVE_BARS } from './data.js';
+import { E, SHIP, STEPS_PER_TICK, STEPS_PER_BEAT, STEPS_PER_BAR, WARP_BARS, REVIVE_BARS, PIERCE_KEEP } from './data.js';
 import { hitLane, contactLane, rimDanger, S } from './enemies.js';
 import { bossDamage } from './bosses.js';
 import { PHASE, DEATH, mod } from './world-shared.js';
@@ -306,8 +306,8 @@ export const shipMethods = {
       this.boltHits(b, best);
       if (b.pierce > 0) {
         b.pierce--;
-        // A bolt that passes through loses a quarter of its bite; beams (bow, sustain) keep it.
-        if (b.pierce < 50) b.dmg *= 0.75;
+        // A bolt that passes through loses part of its bite; beams (bow, sustain) keep it.
+        if (b.pierce < 50) b.dmg *= PIERCE_KEEP;
         lo = best.z;
         continue;
       }
