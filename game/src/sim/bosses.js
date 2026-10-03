@@ -11,7 +11,7 @@ import { spawnEnemy, nearestShip, S } from './enemies.js';
 import { laneOf, wrapU, laneDelta, laneDist, opposite } from './web.js';
 
 const ROLE = { CORE: 0, SEGMENT: 1, SHIELD: 2, MIRROR: 3 };
-const MOVEMENT_BARS = 15; // the Maestro's movements last at least this long, however hard it is hit
+const MOVEMENT_BARS = 11; // the Maestro's movements last at least this long, however hard it is hit
 
 export function makeBoss(w, kind, bare = false) {
   const def = BOSSES[kind] ?? BOSSES.hydra;

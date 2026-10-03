@@ -8,7 +8,7 @@ import { E, ENEMIES } from '../sim/data.js';
 export const SNAP_VERSION = 1;
 const ENEMY_FIELDS = 17;
 const MAX_ENEMIES = 140;
-const SHIP_STATES = ['live', 'down', 'wait', 'out'];
+const SHIP_STATES = ['live', 'down', 'wait', 'out', 'away'];
 
 const num = (v, lo, hi, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d);
 const int = (v, lo, hi, d = 0) => Math.round(num(v, lo, hi, d));

@@ -24,114 +24,166 @@ export async function runPoster(kind) {
     await document.fonts?.ready;
   } catch {}
   try {
-    if (kind === 'thumb1') thumb(vec, W, H, { world: 0, level: 3, shape: 'circle', seed: 41, ships: [0], mods: [{ pierce: 1 }], boss: true, burst: true });
-    else if (kind === 'thumb2') thumb(vec, W, H, { world: 1, level: 2, shape: 'square', seed: 7, ships: [1], mods: [{}], chord: true });
-    else if (kind === 'thumb3') thumb(vec, W, H, { world: 3, level: 2, shape: 'star', seed: 23, ships: [0, 3, 5], mods: [{}, {}, {}], spin: 2.2, burst: true });
+    if (kind === 'thumb1') thumb(vec, W, H, COVER);
+    else if (kind === 'thumb2') thumb(vec, W, H, CHORD);
+    else if (kind === 'thumb3') thumb(vec, W, H, TOGETHER);
     else if (kind === 'thumb4') draftPoster(vec, W, H);
     else if (kind === 'icon') icon(vec, W, H);
     else if (kind && kind.startsWith('badge-')) badge(vec, W, H, kind.slice(6));
-    else thumb(vec, W, H, { world: 0, level: 1, shape: 'circle', seed: 3, ships: [0], mods: [{}] });
+    else thumb(vec, W, H, COVER);
   } catch (err) {
     console.error(err);
   }
   window.__posterReady = true;
 }
 
+// The scenes: [type, lane offset from the start lane, depth]. Bursts are kills caught mid-explosion.
+const COVER = {
+  world: 0,
+  shape: 'circle',
+  ships: [0],
+  boss: true,
+  cast: [
+    [E.FLIPPER, 3, 0.24],
+    [E.FLIPPER, -3, 0.32],
+    [E.FLIPPER, 6, 0.5],
+    [E.FLIPPER, -6, 0.46],
+    [E.TANKER, 4, 0.6],
+    [E.SPIKER, -4, 0.68],
+    [E.FUSEBALL, 1, 0.56],
+    [E.PULSAR, -1, 0.74],
+    [E.WEAVER, -2, 0.18],
+    [E.FLIPPER, 2, 0],
+    [E.SHOT, 5, 0.3],
+  ],
+  spikes: [[-4, 0.36], [7, 0.28]],
+  bolts: [[0, 0.08], [0, 0.2], [0, 0.32], [0, 0.46]],
+  bursts: [[E.FLIPPER, 0, 0.58], [E.TANKER, 5, 0.42]],
+};
+const CHORD = {
+  world: 1,
+  shape: 'square',
+  ships: [1],
+  cast: [
+    [E.FLIPPER, -2, 0.22],
+    [E.WEAVER, 3, 0.3],
+    [E.FUSEBALL, 6, 0.55],
+    [E.FLIPPER, -6, 0.6],
+    [E.TANKER, 1, 0.66],
+    [E.FLIPPER, 8, 0.2],
+    [E.SPIKER, -8, 0.5],
+  ],
+  spikes: [[-8, 0.42]],
+  bolts: [[-1, 0.12], [0, 0.12], [1, 0.12], [-1, 0.3], [0, 0.3], [1, 0.3]],
+  chord: [-4, 0, 4],
+};
+const TOGETHER = {
+  world: 3,
+  shape: 'hourglass',
+  ships: [0, 3, 5],
+  shipLanes: [0, -3, 3],
+  cast: [
+    [E.FLIPPER, -1, 0],
+    [E.FLIPPER, 2, 0],
+    [E.FLIPPER, 5, 0.3],
+    [E.BOMBER, -5, 0.84],
+    [E.MINE, -6, 0.4],
+    [E.TANKER, 7, 0.55],
+    [E.GHOST, -8, 0.36],
+    [E.PULSAR, 9, 0.62],
+    [E.FLIPPER, 10, 0.7],
+  ],
+  bolts: [[0, 0.15], [0, 0.35], [-3, 0.22], [3, 0.1], [3, 0.4]],
+  bursts: [[E.FLIPPER, 1, 0.02], [E.FLIPPER, -2, 0.02]],
+  tether: true,
+};
+
 /**
- * A composed moment: the web, a wave placed lane by lane at every depth, the ships firing, shards from the last
- * kills. The world is the real simulation (stepped a few frames so flips and fuses move); only the cast is placed.
+ * A composed moment: the real simulation's web and enemies, placed lane by lane, stepped a few frames so flips and
+ * fuses move and the phosphor builds; the ships firing; shards from kills caught mid-explosion.
  */
 function thumb(vec, W, H, o) {
   const def = WORLDS[o.world];
-  const zone = { mode: 'run', world: o.world, level: o.level, shape: o.shape, bpm: def.bpm, seed: o.seed, oc: 1 };
-  const players = o.ships.map((ship, i) => ({ id: `p${i}`, ship, mods: o.mods[i] || {}, kind: 'driven' }));
+  const zone = { mode: 'run', world: o.world, level: 2, shape: o.shape, bpm: def.bpm, seed: 11, oc: 1 };
+  const players = o.ships.map((ship, i) => ({ id: `p${i}`, ship, mods: {}, kind: 'driven' }));
   const w = new World({ zone, players, carry: { lives: 3, score: 184260, mult: 6, res: 70 } });
   w.spawns = [];
   while (w.phase === 0) w.update();
   const fx = new Fx();
   const view = new View(vec, fx);
-  view.setWeb(w.web, def.hue);
-  view.layout(W, H, H * 0.04, H * 0.04);
-  view.minSize = Math.max(8, H / 60);
+  view.setWeb(w.web, def.hue, false);
+  view.layout(W, H, H * 0.03, H * 0.03);
+  view.minSize = Math.max(9, H / 55);
   const n = w.n;
-  const start = w.web.start;
-  // The ships on the rim, near the bottom.
+  const at = (off) => (((w.web.start + off) % n) + n) % n;
   o.ships.forEach((_, k) => {
     const ship = w.ships[k];
-    ship.u = ship.pu = (start + [0, -2, 2][k] + n) % n;
+    ship.u = ship.pu = at(o.shipLanes ? o.shipLanes[k] : 0);
     ship.in.target = ship.u;
-    ship.in.fire = true;
+    ship.in.fire = false;
     ship.inv = 0;
   });
-  // The wave.
-  const cast = o.cast || [
-    [E.FLIPPER, 3, 0.82],
-    [E.FLIPPER, 5, 0.55],
-    [E.TANKER, 7, 0.7],
-    [E.SPIKER, 9, 0.45],
-    [E.FLIPPER, 11, 0.3],
-    [E.FUSEBALL, 13, 0.62],
-    [E.WEAVER, 2, 0.4],
-    [E.FLIPPER, 14, 0.9],
-    [E.GHOST, 6, 0.86],
-    [E.FLIPPER, 1, 0.18],
-    [E.PULSAR, 10, 0.75],
-    [E.FLIPPER, 8, 0.95],
-    [E.FLIPPER, 4, 0.97],
-    [E.SHOT, start + 1, 0.22],
-  ];
-  for (const [type, lane, z] of cast) {
-    const e = spawnEnemy(w, type, (start + lane) % n, { z });
-    e.next = w.tick + 3 + (lane % 3);
+  for (const [type, off, z] of o.cast) {
+    const e = spawnEnemy(w, type, at(off), { z });
+    e.next = Infinity; // hold the pose
+    if (z === 0) e.st = 1;
   }
-  w.spikes[(start + 9) % n] = 0.5;
-  w.spikes[(start + 12) % n] = 0.32;
+  for (const [off, h] of o.spikes || []) w.spikes[at(off)] = h;
   const tints = o.ships.map((_, k) => [WHITE, '#ffd23d', '#ff5c8a'][k] || WHITE);
-  // A few frames: bolts leave, things move, the phosphor builds.
-  const frames = 22;
+  // Bolts in flight, placed where the picture wants them.
+  const placeBolts = () => {
+    w.bolts.length = 0;
+    for (const [off, z] of o.bolts || []) {
+      const ship = w.ships[0];
+      const b = w.spawnBolt(ship, at(off), { dmg: 0, speed: 0 });
+      if (b) (b.z = z), (b.pz = z - 0.02);
+    }
+  };
+  const frames = 16;
   for (let i = 0; i < frames; i++) {
     w.update();
-    w.update();
-    for (const ev of w.drain()) if (ev.k === 'kill') fx.shatter(shapeAt(view, ev.a, ev.lane, ev.z), def.hue, 140, 0.7);
-    if (i === 8 && o.burst) {
-      const p = view.P((start + 5) % n, 0.5, [0, 0]);
-      fx.shatter(shapeAt(view, E.TANKER, (start + 5) % n, 0.5), def.hue, 160, 0.8);
-      fx.ring(p[0], p[1], 6, 70, 0.6, WHITE, 20);
-      fx.sparks(p[0], p[1], WHITE, 22, 240, 9);
+    placeBolts();
+    if (i === frames - 6) {
+      for (const [type, off, z] of o.bursts || []) {
+        const p = view.P(at(off), z, [0, 0]);
+        fx.shatter(shapeAt(view, type, at(off), z), def.hue, 150, 0.9);
+        fx.ring(p[0], p[1], 4, H * 0.09, 0.7, WHITE, 20);
+        fx.sparks(p[0], p[1], WHITE, 26, H * 0.4, H / 70);
+      }
     }
-    fx.update(1 / 30);
+    fx.update(1 / 40);
     vec.frame(1 / 60, 1);
-    view.draw({ w, alpha: 1, t: 1.2 + i / 30 + (o.spin || 0), me: 0, tints, calm: false, pulse: i > frames - 4 ? 0.9 : 0.3, od: false, shake: null, rim: 'plain', trails: [] });
+    view.draw({ w, alpha: 1, t: 1.4 + i / 40, me: 0, tints, calm: false, pulse: i > frames - 3 ? 1 : 0.4, od: false, shake: null, rim: 'plain', trails: [] });
     fx.draw(vec);
   }
   if (o.boss) {
-    // The boss far away: a serpent's segments circling the end of the tunnel.
+    // The Hydra far away: a serpent's segments circling the end of the tunnel.
     const vx = view.cx + view.vp[0] * view.S;
     const vy = view.cy + view.vp[1] * view.S;
     const r = view.S * 0.12;
     vec.begin();
     for (let k = 0; k < 6; k++) {
-      const a = -0.6 + k * 0.5;
-      const x = vx + Math.cos(a) * r * 1.55;
-      const y = vy + Math.sin(a) * r * 1.55;
-      const rr = r * (0.44 - k * 0.035);
+      const a = -2.6 + k * 0.52;
+      const x = vx + Math.cos(a) * r * 1.5;
+      const y = vy + Math.sin(a) * r * 1.5;
+      const rr = r * (0.46 - k * 0.04);
       for (let i = 0; i <= 6; i++) {
         const b = Math.PI / 6 + (Math.PI * 2 * i) / 6;
         if (i === 0) vec.move(x + Math.cos(b) * rr, y + Math.sin(b) * rr);
         else vec.to(x + Math.cos(b) * rr, y + Math.sin(b) * rr);
       }
     }
-    vec.glow(def.hue, 2, 1);
+    vec.glow(def.hue, 2.2, 1);
     vec.thin(WHITE, 1.2, 0.7);
   }
   if (o.chord) {
     // A chord: three lanes at once, a triangle joining the kills, a burst at each.
-    const lanes = [(start + 3) % n, (start + 8) % n, (start + 13) % n];
-    const pts = lanes.map((l) => view.P(l, 0.45, [0, 0]));
+    const lanes = o.chord.map(at);
+    const pts = lanes.map((l) => view.P(l, 0.34, [0, 0]));
     for (let k = 0; k < 3; k++) {
-      fx.shatter(shapeAt(view, E.FLIPPER, lanes[k], 0.45), def.hue, 170, 0.7);
-      fx.ring(pts[k][0], pts[k][1], 6, 52, 0.55, WHITE, 18);
-      fx.sparks(pts[k][0], pts[k][1], WHITE, 20, 220, 9);
+      fx.shatter(shapeAt(view, E.FLIPPER, lanes[k], 0.34), def.hue, 190, 0.8);
+      fx.ring(pts[k][0], pts[k][1], 6, H * 0.08, 0.6, WHITE, 18);
+      fx.sparks(pts[k][0], pts[k][1], WHITE, 24, H * 0.35, H / 70);
     }
     fx.update(0.1);
     vec.begin();
@@ -139,7 +191,7 @@ function thumb(vec, W, H, o) {
     vec.to(pts[1][0], pts[1][1]);
     vec.to(pts[2][0], pts[2][1]);
     vec.to(pts[0][0], pts[0][1]);
-    vec.glow(WHITE, 1.8, 0.95);
+    vec.glow(WHITE, 2, 1);
     fx.draw(vec);
   }
 }
@@ -153,56 +205,48 @@ function shapeAt(view, type, lane, z) {
   return out;
 }
 
-/** The draft, as a poster: three mod cards in the stroke font over a dim web. */
+/** The draft, as it is in the game: three mods coming up three lanes of the next world's ring. */
 function draftPoster(vec, W, H) {
   const hue = WORLDS[2].hue;
-  const w = new World({ zone: { mode: 'run', world: 2, level: 1, shape: 'star', bpm: 116, seed: 9, oc: 0 }, players: [{ id: 'a', ship: 2, kind: 'bot' }] });
+  const w = new World({ zone: { mode: 'run', world: 2, level: 1, shape: 'circle', bpm: 116, seed: 9, oc: 0 }, players: [{ id: 'a', ship: 0, kind: 'driven' }] });
+  w.spawns = [];
   const view = new View(vec, new Fx());
-  view.setWeb(w.web, hue);
-  view.layout(W, H, H * 0.05, H * 0.05);
+  view.setWeb(w.web, hue, false);
+  view.layout(W, H, H * 0.04, H * 0.04);
   vec.frame(1, 0);
-  view.draw({ w, alpha: 1, t: 0, me: -1, tints: [WHITE], calm: true, pulse: 0, od: false, shake: null, rim: 'plain', trails: [] });
+  view.draw({ w, alpha: 1, t: 0.3, me: 0, tints: [WHITE], calm: true, pulse: 0.6, od: false, shake: null, rim: 'plain', trails: [] });
+  const cx = view.cx;
+  const cy = view.cy;
+  const R = view.S;
   const c = vec.ctx;
   c.globalCompositeOperation = 'source-over';
-  c.fillStyle = '#020403';
-  c.globalAlpha = 0.72;
+  const g = c.createRadialGradient(cx, cy, 0, cx, cy, R * 0.75);
+  g.addColorStop(0, 'rgba(2,4,3,0.85)');
+  g.addColorStop(1, 'rgba(2,4,3,0)');
+  c.fillStyle = g;
   c.fillRect(0, 0, W, H);
-  c.globalAlpha = 1;
   c.globalCompositeOperation = 'lighter';
-  vec.text('PICK ONE', W / 2, H * 0.14, H * 0.06, WHITE, 0.5, 1);
-  const picks = ['chain', 'metronome', 'ricochet'];
-  const cw = W * 0.24;
-  const ch = H * 0.5;
-  const gap = W * 0.03;
-  const x0 = W / 2 - (3 * cw + 2 * gap) / 2;
-  picks.forEach((k, i) => {
+  vec.text('PICK ONE', cx, cy - R * 0.5, R * 0.13, WHITE, 0.5, 1, 1.1);
+  const picks = [['chain', -3], ['metronome', 0], ['ricochet', 3]];
+  const f = {};
+  for (const [k, off] of picks) {
     const def = MODS.find((m) => m.key === k);
-    const x = x0 + i * (cw + gap);
-    const y = H * 0.28;
-    const on = i === 1;
-    const col = on ? WHITE : hue;
-    const cc = 18;
+    const lane = (w.web.start + off + w.n) % w.n;
+    const on = k === 'metronome';
+    view.frame(lane, 0.24, f);
     vec.begin();
-    vec.move(x, y + cc);
-    vec.to(x, y);
-    vec.to(x + cc, y);
-    vec.move(x + cw - cc, y);
-    vec.to(x + cw, y);
-    vec.to(x + cw, y + cc);
-    vec.move(x + cw, y + ch - cc);
-    vec.to(x + cw, y + ch);
-    vec.to(x + cw - cc, y + ch);
-    vec.move(x + cc, y + ch);
-    vec.to(x, y + ch);
-    vec.to(x, y + ch - cc);
-    vec.glow(col, 2, 1);
-    const size = ch * 0.34;
+    for (const j of [lane, lane + 1]) {
+      const a = view.B(j, 0, [0, 0]);
+      const b = view.B(j, 1, [0, 0]);
+      vec.line(a[0], a[1], b[0], b[1]);
+    }
+    vec.glow(on ? WHITE : hue, 1.2, on ? 0.8 : 0.35);
+    const size = R * 0.2;
     vec.begin();
-    iconPath(vec, MOD_ICONS[k], x + cw / 2 - size / 2, y + ch * 0.12, size);
-    vec.glow(col, 2.4, 1);
-    vec.text(def.name, x + cw / 2, y + ch * 0.62, Math.min(H * 0.05, cw / (def.name.length * 0.95)), col, 0.5, 1);
-    vec.text(def.tag, x + cw / 2, y + ch * 0.8, Math.min(H * 0.024, cw / (def.tag.length * 0.92)), WHITE, 0.5, 0.75);
-  });
+    iconPath(vec, MOD_ICONS[k], f.cx - size / 2, f.cy - size / 2, size);
+    vec.glow(on ? WHITE : hue, 2.6, 1);
+    vec.text(def.name, f.cx, f.cy + size / 2 + 12, R * 0.075, on ? WHITE : hue, 0.5, 1);
+  }
 }
 
 /** The icon: a white ship on a mint ring of lanes. */
@@ -224,7 +268,7 @@ function icon(vec, W, H) {
     if (i === 0) vec.move(p[0], p[1]);
     else vec.to(p[0], p[1]);
   }
-  vec.glow(hue, W / 140, 1);
+  vec.glow(hue, W / 90, 1.1);
   vec.begin();
   for (let i = 0; i < n; i++) {
     const a = at(i, R);
@@ -237,7 +281,7 @@ function icon(vec, W, H) {
     if (i === 0) vec.move(p[0], p[1]);
     else vec.to(p[0], p[1]);
   }
-  vec.glow(hue, W / 280, 0.75);
+  vec.glow(hue, W / 170, 0.85);
   // The lit lane and its bolts.
   vec.begin();
   for (const side of [0, 1]) {
@@ -251,8 +295,8 @@ function icon(vec, W, H) {
     vec.move(cx, cy + d);
     vec.to(cx, cy + d - R * 0.07);
   }
-  vec.glow(WHITE, W / 200, 0.9);
-  const s = W * 0.12;
+  vec.glow(WHITE, W / 130, 1);
+  const s = W * 0.13;
   vec.begin();
   for (const st of SHIP_SHAPES[0]) {
     for (let i = 0; i < st.length; i += 2) {
@@ -262,7 +306,7 @@ function icon(vec, W, H) {
       else vec.to(x, y);
     }
   }
-  vec.glow(WHITE, W / 110, 1.2);
+  vec.glow(WHITE, W / 70, 1.25);
 }
 
 const BADGES = {

@@ -378,12 +378,12 @@ export class World {
   hop(ship) {
     const from = laneOf(this.web, ship.u);
     const gn = mod(ship, 'gracenote');
-    ship.hopCd = this.step + (gn >= 2 ? STEPS_PER_BEAT / 2 : STEPS_PER_BEAT);
+    ship.hopCd = this.step + (gn >= 2 ? (STEPS_PER_BEAT * 3) / 4 : STEPS_PER_BEAT);
     let to = from + ship.dir * SHIP.hopLanes;
     if (!this.web.closed) to = Math.max(0, Math.min(this.n - 1, to));
     ship.u = wrapU(this.web, to);
     ship.pu = ship.u;
-    ship.inv = Math.max(ship.inv, this.step + Math.round((SHIP.hopInvuln + 0.15 * gn) / this.dt));
+    ship.inv = Math.max(ship.inv, this.step + Math.round((SHIP.hopInvuln + 0.06 * gn) / this.dt));
     ship.contact = 0;
     ship.charge = 0;
     const phase = (((this.step - ship.lat) % STEPS_PER_BEAT) + STEPS_PER_BEAT) % STEPS_PER_BEAT;
@@ -491,8 +491,8 @@ export class World {
     let speed = def.speed * (1 + 0.25 * mod(ship, 'staccato'));
     const met = mod(ship, 'metronome');
     const syn = mod(ship, 'syncopate');
-    if (met && onBeat) dmg += met >= 2 ? 1.5 : 1;
-    if (syn && offBeat) (dmg += syn >= 2 ? 1 : 0.75), (speed *= 1.3);
+    if (met && onBeat) dmg += met >= 2 ? 1.25 : 0.75;
+    if (syn && offBeat) (dmg += syn >= 2 ? 0.75 : 0.5), (speed *= 1.25);
     const opts = { dmg, pierce, speed, kind: 0, range: def.range };
     if (def.tines) {
       // Two tines, a lane either side, together (at the end of an open web, both down the one there is).
@@ -515,7 +515,7 @@ export class World {
         if (l >= 0) this.spawnBolt(ship, l, { ...opts, dmg: dmg * 0.4, pierce: 0, kind: 1, range: 0.45 });
       }
     }
-    if (mod(ship, 'counterpoint')) this.spawnBolt(ship, opposite(this.web, lane), { ...opts, dmg: dmg * 0.4, kind: 3 });
+    if (mod(ship, 'counterpoint')) this.spawnBolt(ship, opposite(this.web, lane), { ...opts, dmg: dmg * 0.3, pierce: 0, kind: 3 });
     const echo = mod(ship, 'echo');
     if (echo && ship.echoes.length < 16) ship.echoes.push([this.step + STEPS_PER_BEAT, lane, dmg * (echo >= 2 ? 0.45 : 0.3)]);
     this.event('fire', ship.idx, lane, 0, onBeat ? 1 : offBeat ? 2 : 0, pressed ? 1 : 0);
@@ -734,7 +734,7 @@ export class World {
     // Resonance and Overdrive.
     if (!od) {
       const rz = Math.max(0, ...this.ships.map((s) => mod(s, 'resonator')));
-      this.addRes(def.res * (1 + 0.25 * rz));
+      this.addRes(def.res * (1 + 0.2 * rz));
     } else {
       const fb = this.ships.some((s) => mod(s, 'feedback'));
       if (fb && this.odExtended < 6 / this.dt) {
@@ -759,7 +759,7 @@ export class World {
         for (const o of this.enemies) {
           if (o.dead || o === e || o.type === E.PART) continue;
           const d = laneDist(this.web, Math.round(o.lane), lane);
-          if (d === 0) this.damage(o, db >= 2 ? 2 : 1, ship.idx, 'chain');
+          if (d === 0) this.damage(o, db >= 2 ? 1.5 : 1, ship.idx, 'chain');
         }
       }
     }
@@ -843,7 +843,7 @@ export class World {
     this.res = Math.min(RESONANCE_MAX, this.res + amount);
     if (this.res >= RESONANCE_MAX) {
       const ot = Math.max(0, ...this.ships.map((s) => mod(s, 'overtone')));
-      this.odUntil = this.step + Math.round((OVERDRIVE_SECONDS * (1 + 0.3 * ot)) / this.dt);
+      this.odUntil = this.step + Math.round((OVERDRIVE_SECONDS * (1 + 0.25 * ot)) / this.dt);
       this.odExtended = 0;
       this.res = 0;
       this.stats.od++;
@@ -990,7 +990,7 @@ export class World {
   down(ship, cause, force = false) {
     if (ship.state !== 'live') return;
     if (!force && this.step < ship.inv) return;
-    if (ship.shield && !force) {
+    if (ship.shield && !force && cause !== DEATH.boss && cause !== DEATH.tide) {
       ship.shield = false;
       ship.inv = this.step + STEPS_PER_BEAT;
       this.event('shieldbreak', ship.idx, laneOf(this.web, ship.u));
@@ -1037,7 +1037,8 @@ export class World {
   /** The run is over when nobody is flying or about to fly again. */
   checkOver() {
     if (!this.auth || this.phase === PHASE.OVER || this.phase === PHASE.DONE) return;
-    if (this.ships.some((s) => s.state === 'live' || s.state === 'wait')) return;
+    // A ship whose player is away (a reload, a dropped connection) still counts: they may be back in a moment.
+    if (this.ships.some((s) => s.state === 'live' || s.state === 'wait' || s.state === 'away')) return;
     this.setPhase(PHASE.OVER);
     this.event('over', 0, 0, 0, this.ships.find((s) => s.cause)?.cause || 0);
   }

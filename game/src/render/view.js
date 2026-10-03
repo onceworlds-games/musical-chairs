@@ -32,10 +32,11 @@ export class View {
     this.minSize = 7; // the smallest half-width an enemy is drawn at, in CSS px
   }
 
-  /** A new web: fit it to the screen. */
-  setWeb(web, hue) {
+  /** A new web: fit it to the screen. spins: the web turns (it needs room for any angle). */
+  setWeb(web, hue, spins = false) {
     this.web = web;
     this.hue = hue;
+    this.spins = spins;
     this.rim = web.rim.map((p) => p.slice());
     this.lean = [0, 0];
     this.fit();
@@ -56,11 +57,22 @@ export class View {
     const side = 14;
     const availW = Math.max(40, this.W - side * 2);
     const availH = Math.max(40, this.H - this.top - this.bottom);
-    if (web.closed) {
+    if (web.closed && this.spins) {
       // Room for any spin: the widest point decides.
       let r = 0;
       for (const p of web.rim) r = Math.max(r, Math.hypot(p[0], p[1]));
       this.S = Math.min(availW, availH) / (2 * r * 1.04);
+      this.cx = this.W / 2;
+      this.cy = this.top + availH / 2;
+    } else if (web.closed) {
+      // A still loop fills the space it has, centred on its vanishing point (the camera's lean has a little room).
+      let rx = 0;
+      let ry = 0;
+      for (const p of web.rim) {
+        rx = Math.max(rx, Math.abs(p[0]));
+        ry = Math.max(ry, Math.abs(p[1]));
+      }
+      this.S = Math.min(availW / (2 * rx * 1.05), availH / (2 * ry * 1.05));
       this.cx = this.W / 2;
       this.cy = this.top + availH / 2;
     } else {
@@ -487,7 +499,7 @@ export class View {
     const v = this.vec;
     for (let i = 0; i <= 14; i++) {
       const z = i / 14;
-      const wob = calm ? (i % 2 ? 0.22 : -0.22) : Math.sin(t * 37 + i * 2.1) * 0.3;
+      const wob = calm ? (i % 2 ? 0.22 : -0.22) : Math.sin(t * 11 + i * 2.1) * 0.3;
       this.P(lane + wob, z, tmpA);
       if (i === 0) v.move(tmpA[0], tmpA[1]);
       else v.to(tmpA[0], tmpA[1]);
@@ -829,7 +841,7 @@ export class View {
           const steps = Math.max(4, Math.round(Math.abs(d) * 4));
           for (let k = 0; k <= steps; k++) {
             const uu = ua + (d * k) / steps;
-            const zz = 0.035 + (scene.calm ? 0 : Math.abs(Math.sin(t * 31 + k * 1.9)) * 0.03);
+            const zz = 0.035 + (scene.calm ? 0 : Math.abs(Math.sin(t * 9 + k * 1.9)) * 0.03);
             this.P(uu, zz, tmpA);
             if (k === 0) v.move(tmpA[0], tmpA[1]);
             else v.to(tmpA[0], tmpA[1]);
@@ -840,7 +852,17 @@ export class View {
       if (any) v.glow(this.hue, 1.2, 0.9);
     }
     for (const ship of w.ships) {
-      if (ship.gone) continue;
+      if (ship.gone) {
+        // A player who went: their ship fades over half a second.
+        const k = 1 - (performance.now() - (ship.goneAt || 0)) / 500;
+        if (k > 0) {
+          this.frame(this.interpU(ship, scene.alpha), 0, f);
+          v.begin();
+          this.strokes(SHIP_SHAPES[ship.type] || SHIP_SHAPES[0], f, 1, 1.05);
+          v.glow(scene.tints[ship.idx] || WHITE, 1.4, 0.8 * k);
+        }
+        continue;
+      }
       const u = this.interpU(ship, scene.alpha);
       const tint = scene.tints[ship.idx] || WHITE;
       const z = this.camZ > 0 ? this.camZ / 0.92 : 0;

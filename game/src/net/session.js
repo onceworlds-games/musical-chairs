@@ -18,7 +18,7 @@ export const JOIN = { private: true, maxPlayers: 4, minPlayers: 1, lobby: 'bar',
 const SNAP_MS = 160;
 const BATCH_MS = 90;
 const PRESENCE_MS = 66;
-const HUB_DEFAULT = { mode: 'run', oc: 0, pw: 0, pl: 1, pt: 1 };
+const HUB_DEFAULT = { mode: 'run', oc: 0, pw: 0, pl: 1, pt: 2 };
 
 const str = (v, max = 40) => (typeof v === 'string' ? v.slice(0, max) : '');
 
@@ -580,8 +580,27 @@ export class Session {
         ship.u = w.web.closed ? ((u % w.n) + w.n) % w.n : Math.max(0, Math.min(w.n - 1, u));
         ship.in.fire = at.f === 1;
       }
+      // A player whose connection is away keeps their seat (and the run waits for them); one who left is out.
       const p = this.room.players?.get?.(ship.id);
-      ship.gone = !p || p.connected === false;
+      const gone = !p || p.connected === false;
+      if (gone && !ship.gone) {
+        ship.gone = true;
+        ship.goneAt = performance.now();
+        if (ship.state === 'live' || ship.state === 'wait') {
+          ship.awayState = ship.state;
+          ship.state = 'away';
+        }
+      } else if (!gone && ship.gone) {
+        ship.gone = false;
+        if (ship.state === 'away') {
+          ship.state = ship.awayState || 'live';
+          ship.inv = w.step + 64;
+        }
+      }
+      if (!p && ship.state === 'away' && w.auth) {
+        ship.state = 'out';
+        w.checkOver();
+      }
     }
   }
 

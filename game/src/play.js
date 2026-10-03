@@ -43,7 +43,7 @@ export class Play {
     this.tetherMine = 0;
     const def = WORLDS[zone.world] || WORLDS[0];
     this.hue = def.hue;
-    app.view.setWeb(w.web, def.hue);
+    app.view.setWeb(w.web, def.hue, Boolean(def.spin));
     app.music.setWorld(def);
     app.engine.resync();
     app.fx.clear();

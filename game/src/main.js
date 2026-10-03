@@ -519,13 +519,13 @@ class App {
       this.attractT = 0;
       this.attractWorld = spec.world;
       this.stageKey = spec.key;
-      this.view.setWeb(this.attract.web, def.hue);
+      this.view.setWeb(this.attract.web, def.hue, Boolean(def.spin));
       this.music.setWorld(def);
       this.engine.resync();
     }
     const w = this.attract;
     if (this.view.web !== w.web) {
-      this.view.setWeb(w.web, WORLDS[this.attractWorld].hue);
+      this.view.setWeb(w.web, WORLDS[this.attractWorld].hue, Boolean(WORLDS[this.attractWorld].spin));
       this.music.setWorld(WORLDS[this.attractWorld]);
       this.engine.resync();
     }
