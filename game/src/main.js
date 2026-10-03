@@ -34,6 +34,7 @@ class App {
     this.engine = new Engine();
     this.music = new Music(this.engine);
     this.input = new Input(this.canvas, this.view);
+    this.input.platformTouch = () => platform.touch;
     this.buttons = new Buttons(document.getElementById('hits'), (id, b) => this.press(id, b));
     this.menus = new Menus(this);
     this.session = new Session(this);
@@ -178,7 +179,7 @@ class App {
     if (!texts) return;
     const h = this.profile.hints;
     if ((h[kind] || 0) >= 3) return;
-    const device = this.input.lastDevice === 'touch' ? 'touch' : this.input.lastDevice === 'pad' ? 'pad' : this.input.lastDevice === 'mouse' ? 'mouse' : 'keys';
+    const device = platform.touch || this.input.lastDevice === 'touch' ? 'touch' : this.input.lastDevice === 'pad' ? 'pad' : this.input.lastDevice === 'mouse' ? 'mouse' : 'keys';
     const text = texts.all || texts[device];
     if (!text) return;
     h[kind] = (h[kind] || 0) + 1;
@@ -285,6 +286,11 @@ class App {
       this.setPaused(false, true);
       this.engine.setDuck(this.menuOpen);
     }
+    // The platform's Ready strip belongs to the lobby screens, not the title.
+    try {
+      if (next === 'title') s.room?.hideLobby?.(true);
+      else if (prev === 'title') s.room?.hideLobby?.(false);
+    } catch {}
     this.layoutView();
     // Keys pressed on the last screen do nothing on this one.
     for (const k of ['left', 'right', 'fire', 'confirm', 'pause', 'hop', 'zap']) this.input.edges[k] = false;
@@ -575,6 +581,13 @@ class App {
       case 'closed':
         return this.menus.closed(v, this.W, this.H, this.t, hue, s.closed);
       case 'title': {
+        // The strip comes back by itself when a match starts or ends: keep it off the title.
+        if (this.t - (this.hiddenAt || -9) > 1 && s.match.phase === 'lobby') {
+          this.hiddenAt = this.t;
+          try {
+            s.room?.hideLobby?.(true);
+          } catch {}
+        }
         const b = this.menus.title(v, this.W, this.H, this.t, hue);
         if (this.input.take('confirm') || this.input.take('fire')) this.press('play');
         return b;

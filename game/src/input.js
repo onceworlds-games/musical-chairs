@@ -45,6 +45,17 @@ export class Input {
       if (document.hidden) this.releaseAll();
     });
     const el = this.el;
+    // Whatever was touched last (a button, the canvas) says how the player is playing.
+    addEventListener(
+      'pointerdown',
+      (e) => {
+        if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+          this.usedTouch = true;
+          this.lastDevice = 'touch';
+        } else if (e.pointerType === 'mouse') this.lastDevice = 'mouse';
+      },
+      { capture: true, passive: true },
+    );
     el.addEventListener('pointerdown', (e) => this.onDown(e), opts);
     addEventListener('pointermove', (e) => this.onMove(e), { passive: true });
     addEventListener('pointerup', (e) => this.onUp(e), opts);
@@ -277,7 +288,7 @@ export class Input {
     if (out.target !== null && !web.closed) out.target = Math.max(0, Math.min(web.n - 1, out.target));
     // Keep the dial's count in step with where the ship really is (a hop, a respawn).
     if (this.steer === null && this.touchU !== null && Math.abs(this.touchU - ship.u) > 0.6) this.touchU = ship.u;
-    const touchPlay = this.usedTouch && this.lastDevice === 'touch';
+    const touchPlay = (this.usedTouch && this.lastDevice === 'touch') || this.platformTouch?.() === true;
     out.fire = this.held(FIRE) || this.mouse.down || Boolean(pad?.fire) || this.autofire || touchPlay;
     out.hop = this.edges.hop;
     out.zap = this.edges.zap;

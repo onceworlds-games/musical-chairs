@@ -154,7 +154,9 @@ export class Hud {
     }
     if (this.hint) {
       const f = Math.min(1, this.hint.life, (this.hint.max - this.hint.life) * 4);
-      v.text(this.hint.text, W / 2, myy - (small ? 40 : 50), small ? 11 : 14, WHITE, 0.5, 0.85 * f);
+      // Above the meter, and above the thumbs' buttons on a touch screen.
+      const hy = d.touch ? H - 190 : myy - (small ? 40 : 50);
+      v.text(this.hint.text, W / 2, hy, small ? 11 : 14, WHITE, 0.5, 0.85 * f);
     }
   }
 }
