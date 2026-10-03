@@ -245,6 +245,7 @@ class App {
       buttons = this.drawMenu();
     }
     this.buttons.set(buttons);
+    this.soundHint(dt);
     this.buttons.draw(vec, this.hue(), this.t, this.calm, platform.touch || this.input.usedTouch);
     if (this.play.flash > 0) {
       // A zap: one soft glow round the ship that fades over a fifth of a second. Never a wash of the whole screen
@@ -264,6 +265,20 @@ class App {
       this.play.flash = Math.max(0, this.play.flash - dt * 1.8);
     }
     if (!this.started && this.screen !== 'title' && this.screen !== 'closed' && this.screen !== 'connecting' && this.input.take('confirm')) this.press('play');
+  }
+
+  /**
+   * The sound can be parked after it started (iOS does it for a call, Siri or the lock screen): say so, once it has
+   * been so for a moment, and the next touch or key brings it back (Engine.listen). Silent games lose players.
+   */
+  soundHint(dt) {
+    const e = this.engine;
+    const stuck = this.started && e.ok && e.ctx && e.ctx.state !== 'running' && !document.hidden;
+    this.soundOff = stuck ? (this.soundOff || 0) + dt : 0;
+    if (this.soundOff > 1.2 && !this.paused) {
+      const v = this.vec;
+      v.text('TAP FOR SOUND', this.W / 2, this.short ? 14 : this.screen === 'play' ? Math.max(44, this.H * 0.1 + 26) : this.H - 130, this.W < 440 ? 12 : 14, '#ffffff', 0.5, 0.8 + (this.calm ? 0 : 0.2 * Math.sin(this.t * 4)));
+    }
   }
 
   screenCode() {
