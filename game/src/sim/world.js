@@ -473,7 +473,7 @@ export class World {
       if (this.step % every === 0) {
         for (const off of this.droneOffsets(ship, drones)) {
           if (!this.web.closed && (lane + off < 0 || lane + off > this.n - 1)) continue;
-          this.spawnBolt(ship, laneOf(this.web, lane + off), { dmg: def.drones ? 0.8 : 1, pierce: 0, speed: 1.6, kind: 5 });
+          this.spawnBolt(ship, laneOf(this.web, lane + off), { dmg: 1, pierce: 0, speed: 1.6, kind: 5 });
         }
       }
     }

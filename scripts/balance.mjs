@@ -79,60 +79,40 @@ if (on('final')) {
 }
 
 // ---------------------------------------------------------------- mod impact on the expert's final boss
+// The baseline is a good build without the mod (the smart bot's picks over every draft, that mod refused); the test
+// gives the same build the mod at its full stack. Pairs take the strongest singles two at a time.
 if (on('mods')) {
   const n = quick ? 60 : 160;
-  // A plain baseline build: the smart picks minus whatever mod is being tested.
-  const baseRate = (skip) => {
+  const rate = (skip, extra) => {
     let wins = 0;
     for (let i = 0; i < n; i++) {
       const seed = hash32('mods', i);
-      const mods = buildFor(0, 14, seed, skip);
+      const mods = { ...buildFor(0, 23, seed, skip), ...extra };
       const r = playRun({ seed, skill: 'expert', mods: [mods], from: 23, to: 23, picks: 'none', lives: 3 });
       if (r.cleared) wins++;
     }
     return wins / n;
   };
-  const withMod = (key, count, skip) => {
-    let wins = 0;
-    for (let i = 0; i < n; i++) {
-      const seed = hash32('mods', i);
-      const mods = buildFor(0, 14, seed, skip);
-      mods[key] = Math.max(mods[key] || 0, count);
-      const r = playRun({ seed, skill: 'expert', mods: [mods], from: 23, to: 23, picks: 'none', lives: 3 });
-      if (r.cleared) wins++;
-    }
-    return wins / n;
-  };
-  row('MOD IMPACT (expert, final boss)', 'base', 'with max', 'delta');
+  row('MOD IMPACT (expert, final boss)', 'without', 'with max', 'delta');
   const deltas = [];
   for (const m of MODS) {
     if (m.coop) continue;
-    const base = baseRate([m.key]);
-    const rate = withMod(m.key, m.max, [m.key]);
-    deltas.push([m.key, rate - base]);
-    row(`  ${m.name}`, pct(base), pct(rate), `${rate - base >= 0 ? '+' : ''}${(100 * (rate - base)).toFixed(0)}`);
+    const base = rate([m.key], {});
+    const with_ = rate([m.key], { [m.key]: m.max });
+    deltas.push([m.key, with_ - base]);
+    row(`  ${m.name}`, pct(base), pct(with_), `${with_ - base >= 0 ? '+' : ''}${(100 * (with_ - base)).toFixed(0)}`);
   }
   deltas.sort((a, b) => b[1] - a[1]);
-  console.log('  top single mods:', deltas.slice(0, 5).map(([k, d]) => `${k} ${(100 * d).toFixed(0)}`).join(', '));
-  // Pairs among the strongest singles.
-  const top = deltas.slice(0, 6).map(([k]) => k);
-  row('PAIRS (strongest singles)', 'base', 'with both', 'delta');
+  console.log('  strongest:', deltas.slice(0, 5).map(([k, d]) => `${k} ${(100 * d).toFixed(0)}`).join(', '));
+  const top = deltas.slice(0, 5).map(([k]) => k);
+  row('PAIRS (strongest singles)', 'without', 'with both', 'delta');
   for (let i = 0; i < top.length; i++) {
     for (let j = i + 1; j < top.length; j++) {
       const a = MODS.find((m) => m.key === top[i]);
       const b = MODS.find((m) => m.key === top[j]);
-      let wins = 0;
-      let baseWins = 0;
-      for (let s = 0; s < n; s++) {
-        const seed = hash32('pairs', s);
-        const mods = buildFor(0, 14, seed, [a.key, b.key]);
-        const rb = playRun({ seed, skill: 'expert', mods: [mods], from: 23, to: 23, picks: 'none', lives: 3 });
-        if (rb.cleared) baseWins++;
-        const m2 = { ...mods, [a.key]: a.max, [b.key]: b.max };
-        const r = playRun({ seed, skill: 'expert', mods: [m2], from: 23, to: 23, picks: 'none', lives: 3 });
-        if (r.cleared) wins++;
-      }
-      row(`  ${a.name} + ${b.name}`, pct(baseWins / n), pct(wins / n), `+${((100 * (wins - baseWins)) / n).toFixed(0)}`);
+      const base = rate([a.key, b.key], {});
+      const both = rate([a.key, b.key], { [a.key]: a.max, [b.key]: b.max });
+      row(`  ${a.name} + ${b.name}`, pct(base), pct(both), `${both - base >= 0 ? '+' : ''}${(100 * (both - base)).toFixed(0)}`);
     }
   }
 }

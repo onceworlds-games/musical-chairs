@@ -154,11 +154,11 @@ export const WORLDS = [
     bossShape: 'hourglass',
     boss: 'tide',
     pace: 1.4,
-    tough: 1.75, // hit points of a plain enemy here
+    tough: 2, // hit points of a plain enemy here
     budget: 104,
     pool: { [E.FLIPPER]: 8, [E.TANKER]: 3, [E.SPIKER]: 3, [E.FUSEBALL]: 3, [E.WEAVER]: 2, [E.PULSAR]: 2, [E.GHOST]: 2, [E.BOMBER]: 2 },
     cargo: E.FUSEBALL,
-    shots: 0.13,
+    shots: 0.16,
   },
   {
     key: 'lime',
@@ -172,11 +172,11 @@ export const WORLDS = [
     bossShape: 'flat',
     boss: 'mirror',
     pace: 1.55,
-    tough: 1.75, // hit points of a plain enemy here
+    tough: 2.25, // hit points of a plain enemy here
     budget: 124,
     pool: { [E.FLIPPER]: 8, [E.TANKER]: 2, [E.SPIKER]: 2, [E.FUSEBALL]: 3, [E.WEAVER]: 3, [E.PULSAR]: 2, [E.GHOST]: 2, [E.BOMBER]: 2, [E.SIREN]: 3 },
     cargo: E.FLIPPER,
-    shots: 0.15,
+    shots: 0.19,
   },
   {
     key: 'rose',
@@ -190,12 +190,12 @@ export const WORLDS = [
     bossShape: 'circle',
     boss: 'maestro',
     pace: 1.7,
-    tough: 2, // hit points of a plain enemy here
+    tough: 2.5, // hit points of a plain enemy here
     budget: 144,
     pool: { [E.FLIPPER]: 8, [E.TANKER]: 3, [E.SPIKER]: 2, [E.FUSEBALL]: 3, [E.WEAVER]: 2, [E.PULSAR]: 3, [E.GHOST]: 2, [E.BOMBER]: 2, [E.SIREN]: 3 },
     cargo: E.PULSAR,
     spin: 0.11, // radians per second: these webs turn
-    shots: 0.17,
+    shots: 0.22,
   },
   // The Descent's own worlds (after the six, they alternate with the others at rising tempo).
   {
@@ -210,11 +210,11 @@ export const WORLDS = [
     bossShape: 'octagon',
     boss: 'gate',
     pace: 1.45,
-    tough: 1.75, // hit points of a plain enemy here
+    tough: 2.25, // hit points of a plain enemy here
     budget: 110,
     pool: { [E.FLIPPER]: 8, [E.TANKER]: 3, [E.SPIKER]: 3, [E.FUSEBALL]: 3, [E.WEAVER]: 3, [E.PULSAR]: 2, [E.GHOST]: 2, [E.BOMBER]: 2, [E.SIREN]: 2 },
     cargo: E.FUSEBALL,
-    shots: 0.14,
+    shots: 0.18,
   },
   {
     key: 'sky',
@@ -228,12 +228,12 @@ export const WORLDS = [
     bossShape: 'star',
     boss: 'conductor',
     pace: 1.5,
-    tough: 1.75, // hit points of a plain enemy here
+    tough: 2.25, // hit points of a plain enemy here
     budget: 116,
     pool: { [E.FLIPPER]: 8, [E.TANKER]: 3, [E.SPIKER]: 2, [E.FUSEBALL]: 3, [E.WEAVER]: 3, [E.PULSAR]: 3, [E.GHOST]: 3, [E.BOMBER]: 2, [E.SIREN]: 2 },
     cargo: E.PULSAR,
     spin: 0.07,
-    shots: 0.15,
+    shots: 0.18,
   },
 ];
 
@@ -254,11 +254,11 @@ export const BOSSES = {
 // rate: ticks between bolts (1 = sixteenths). dmg per bolt. speed in z/s. range: where bolts fade (1 = the far end).
 export const SHIPS = [
   { key: 'plectrum', name: 'PLECTRUM', rate: 1, dmg: 1, speed: 1.6, range: 1, tag: 'STEADY SIXTEENTHS' },
-  { key: 'mallet', name: 'MALLET', rate: 2, dmg: 1.25, speed: 2.1, range: 0.7, spread: 1, tag: 'THREE LANES, CLOSE' },
-  { key: 'reed', name: 'REED', rate: 1, dmg: 0.85, speed: 1.45, range: 1, homing: 1, tag: 'NOTES THAT SEEK' },
-  { key: 'bow', name: 'BOW', rate: 2, dmg: 2, speed: 2.7, range: 1, pierceAll: 1, tag: 'A BEAM THAT PIERCES' },
-  { key: 'chime', name: 'CHIME', rate: 2, dmg: 1.2, speed: 1.7, range: 1, drones: 2, tag: 'DRONES PLAY ALONG' },
-  { key: 'fork', name: 'FORK', rate: 2, dmg: 1.15, speed: 1.7, range: 1, tines: 1, tag: 'TWO TINES, ONE HUM' },
+  { key: 'mallet', name: 'MALLET', rate: 2, dmg: 1.1, speed: 2.1, range: 0.7, spread: 1, tag: 'THREE LANES, CLOSE' },
+  { key: 'reed', name: 'REED', rate: 1, dmg: 0.95, speed: 1.45, range: 1, homing: 1, tag: 'NOTES THAT SEEK' },
+  { key: 'bow', name: 'BOW', rate: 2, dmg: 2.3, speed: 2.7, range: 1, pierceAll: 1, tag: 'A BEAM THAT PIERCES' },
+  { key: 'chime', name: 'CHIME', rate: 2, dmg: 1.4, speed: 1.7, range: 1, drones: 2, tag: 'DRONES PLAY ALONG' },
+  { key: 'fork', name: 'FORK', rate: 2, dmg: 1.45, speed: 1.7, range: 1, tines: 1, tag: 'TWO TINES, ONE HUM' },
 ];
 
 /** What unlocks each ship (checked against the profile). */
