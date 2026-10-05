@@ -27,6 +27,7 @@ export function makeField() {
     playing: false, // a round of the knockout is on: whoever isn't in it is a ghost
     alive: new Set(),
     winner: null,
+    out: null,
     step: 0,
     game: 1,
     chairsCycle: -1,
@@ -49,6 +50,7 @@ export function syncField(F, g, now) {
     F.music = 'off';
     F.playing = false;
     F.winner = null;
+    F.out = null;
     F.alive.clear();
     return F;
   }
@@ -67,6 +69,7 @@ export function syncField(F, g, now) {
   F.riseAt = g.ph === 'out' ? g.until - 400 : Infinity;
   F.until = g.until;
   F.winner = g.winner;
+  F.out = g.out;
   F.step = g.step;
   F.game = g.game;
   F.playing = g.ph === 'music' || g.ph === 'race' || g.ph === 'out';
@@ -121,6 +124,7 @@ export class Practice {
     F.until = start + PRACTICE.cycle;
     F.riseAt = start + PRACTICE.hold;
     F.winner = null;
+    F.out = null;
     F.playing = false;
     F.step = 1;
     F.game = 1;
@@ -182,6 +186,7 @@ export class World {
     let a = this.actors.get(id);
     if (a) {
       a.kind = kind;
+      if (kind === 'bot' || kind === 'view') this.ensureBrain(a);
       return a;
     }
     a = makeActor(id, kind, x, y);

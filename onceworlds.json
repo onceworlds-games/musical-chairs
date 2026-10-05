@@ -1,0 +1,23 @@
+{
+  "slug": "musical-chairs",
+  "name": "Musical Chairs",
+  "description": "When the music stops, grab a chair! One chair too few every time.",
+  "dir": "game",
+  "productionBranch": "main",
+  "genre": "Party",
+  "icon": "store/icon.png",
+  "thumbnails": ["store/thumb-1.png", "store/thumb-2.png", "store/thumb-3.png"],
+  "controls": [
+    { "keys": ["W", "A", "S", "D"], "action": "Move" },
+    { "keys": ["↑", "←", "↓", "→"], "action": "Move" },
+    { "keys": ["Space"], "action": "Bump" },
+    { "keys": ["Space"], "action": "Cheer, once you are out" },
+    { "keys": ["Enter"], "action": "Play" }
+  ],
+  "badges": [
+    { "id": "first-win", "name": "First Win", "description": "Win a match.", "icon": "store/badge-first-win.png" },
+    { "id": "quick-sit", "name": "Quick Sit", "description": "Grab a chair within 1 second of the music stopping.", "icon": "store/badge-quick-sit.png" },
+    { "id": "chair-thief", "name": "Chair Thief", "description": "Bump someone away from a chair and take it.", "icon": "store/badge-chair-thief.png" },
+    { "id": "party-guest", "name": "Party Guest", "description": "Play 10 matches.", "icon": "store/badge-party-guest.png" }
+  ]
+}

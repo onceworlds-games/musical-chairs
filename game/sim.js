@@ -40,6 +40,7 @@ export function makeActor(id, kind, x, y) {
     claimT: 0,
     sat: false, // the host has given it the chair
     sitFlag: false, // a remote page says it sits
+    qPrev: false, // a bot's "?" flag the last time it was read from a snapshot
     hits: [], // who this bump has already hit
     speedMul: 1,
     bubble: '',
