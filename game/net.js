@@ -371,6 +371,14 @@ export class Session {
     if (this.snaps.length > 6) this.snaps.shift();
   }
 
+  /** Where the host's `index`th bot was in the latest snapshot, for a page that takes the bots over: [x, y] or null. */
+  lastBotPos(index) {
+    this.readBots();
+    const s = this.snaps[this.snaps.length - 1];
+    const p = s && s.p[index];
+    return p ? [p[0], p[1]] : null;
+  }
+
   clearSnaps() {
     this.snaps.length = 0;
     this.seenB = null;

@@ -12,8 +12,8 @@ import { W, H, OBSTACLES, GOLD, CHAIR_COLORS, DROP_MS, rng } from './rules.js';
 import { BUMP_TIME } from './sim.js';
 import { INK, SHADOW, clamp, ease, pop, label, font, shade, roundRect, circle, ellipse, fillStroke, checkBadge, fitName, starPath } from './gfx.js';
 
-export const PAD = { l: 0.9, r: 0.9, t: 1.4, b: 0.9 };
-export const BOTTOM_RESERVE = 26; // px kept for the platform's strip and the thumbs
+export const PAD = { l: 0.9, r: 0.9, t: 1.2, b: 0.6 };
+export const BOTTOM_RESERVE = 12; // px kept under the room (the platform's strip and the thumbs sit over its bottom edge)
 export const ACTOR = 1.2; // a character is drawn this much bigger than its collision circle
 export const BG = '#2a1a5e';
 
@@ -159,6 +159,22 @@ export function buildFloor(S) {
       g.closePath();
       fillStroke(g, ['#ff4757', '#ffc312', '#2ed573', '#2f9bff', '#ff6bb5'][(i + (off ? 2 : 0)) % 5], Math.max(1.5, 0.045 * s));
     }
+  }
+  // curly streamers off the top corners
+  const ribbons = [['#ff4757', -0.2, 3.4, 4.6, 0.2], ['#ffc312', 0.4, 4.4, 3.9, 0.6], ['#2f9bff', W + 0.2, W - 3.4, 4.6, 0.2], ['#2ed573', W - 0.4, W - 4.4, 3.9, 0.6], ['#ff6bb5', 0.9, 5.4, 3.2, 0.1], ['#a55eea', W - 0.9, W - 5.4, 3.2, 0.1]];
+  for (const [col, x0, x1, len, bend] of ribbons) {
+    g.beginPath();
+    g.moveTo(X(x0), Y(-1.2));
+    const cxm = (x0 + x1) / 2;
+    g.bezierCurveTo(X(cxm - bend * 4), Y(-1.2 + len * 0.18), X(cxm + bend * 4), Y(-1.2 + len * 0.1), X(x1), Y(-1.2 + len * 0.28));
+    g.lineWidth = Math.max(3, 0.14 * s);
+    g.strokeStyle = INK;
+    g.lineCap = 'round';
+    g.stroke();
+    g.lineWidth = Math.max(1.8, 0.08 * s);
+    g.strokeStyle = col;
+    g.stroke();
+    g.lineCap = 'butt';
   }
   return cv;
 }
@@ -589,6 +605,25 @@ function face(ctx, k, f, expr, cy, r, t) {
   ctx.restore();
 }
 
+const POS = { x: 0, y: 0 };
+
+/** Where to draw a character: on its chair once the host has given it one, on the golden chair for a game's winner. */
+function placeOf(F, a) {
+  POS.x = a.x;
+  POS.y = a.y;
+  if (F.ph === 'over' && F.winner === a.id) {
+    POS.x = GOLD.x;
+    POS.y = GOLD.y;
+  } else if (a.chair >= 0 && a.sat) {
+    const c = F.chairs[a.chair];
+    if (c) {
+      POS.x = c[0];
+      POS.y = c[1];
+    }
+  }
+  return POS;
+}
+
 function kickAt(S, a) {
   return Math.pow(1 - ((S.beat + vis(a).phase * 0.4) % 1), 3);
 }
@@ -600,8 +635,9 @@ export function drawActor(ctx, S, a) {
   const person = a.person || S.people.get(a.id) || null;
   const v = vis(a);
   const k = cam.s * ACTOR;
-  const gx = cam.ox + a.x * cam.s;
-  const gy = cam.oy + a.y * cam.s;
+  const at = placeOf(F, a);
+  const gx = cam.ox + at.x * cam.s;
+  const gy = cam.oy + at.y * cam.s;
   const speed = Math.hypot(a.vx, a.vy);
   const seatedHere = a.chair >= 0 || a.sitFlag || v.forceSeat;
   const isMe = a.id === S.meId;
@@ -668,8 +704,9 @@ export function drawActor(ctx, S, a) {
   const swing = speed > 0.6 ? Math.sin(v.run * Math.PI * 2) * 0.12 : 0;
   const up = seatedHere || (ghost && Math.sin(S.t * 5 + v.phase * 6) > 0) || (dancing && speed < 0.6 && kickAt(S, a) > 0.45) || (S.world.field.ph === 'over' && F.winner === a.id);
   for (const sx of [-1, 1]) {
-    const ay = up ? -0.78 : -0.34 + (sx > 0 ? swing : -swing);
-    ellipse(ctx, sx * 0.47 * k, ay * k, 0.13 * k, 0.13 * k);
+    // out: a shrug, hands up and out
+    const ay = outNow ? -0.5 + Math.sin(S.t * 6) * 0.04 : up ? -0.78 : -0.34 + (sx > 0 ? swing : -swing);
+    ellipse(ctx, sx * (outNow ? 0.62 : 0.47) * k, ay * k, 0.13 * k, 0.13 * k);
     fillStroke(ctx, shade(color, 0.12), o * 0.9);
   }
   // body
@@ -790,8 +827,9 @@ export function drawName(ctx, S, a) {
   if (!name) return;
   const { cam } = S;
   const fs = clamp(cam.s * 0.4, 10, 20);
-  const x = cam.ox + a.x * cam.s;
-  const y = cam.oy + a.y * cam.s + 0.42 * cam.s * ACTOR;
+  const at = placeOf(S.world.field, a);
+  const x = cam.ox + at.x * cam.s;
+  const y = cam.oy + at.y * cam.s + 0.42 * cam.s * ACTOR;
   const t = fitName(ctx, name, fs, cam.s * 3);
   ctx.save();
   ctx.font = font(fs);

@@ -206,7 +206,7 @@ export function createAudio() {
     if (!bus) return;
     // drums: kick on the beat, clap on 2 and 4, hats between
     if (i % 4 === 0) {
-      tone({ f: 150, f2: 45, dur: 0.16, vol: 0.5, type: 'sine', at: t, dest: bus });
+      tone({ f: 150, f2: 45, dur: 0.16, vol: 0.42, type: 'sine', at: t, dest: bus });
     }
     if (i === 4 || i === 12) hiss({ f: 1700, dur: 0.12, vol: 0.2, q: 0.9, at: t, dest: bus });
     if (i % 2 === 0) hiss({ f: 7000, type: 'highpass', dur: i % 4 === 2 ? 0.05 : 0.025, vol: i % 4 === 2 ? 0.1 : 0.06, at: t, dest: bus });

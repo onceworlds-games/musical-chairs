@@ -54,6 +54,7 @@ function boot(joined) {
   let rosterCache = { id: '', roster: [] };
   let gCache = { raw: null, mid: '', g: null };
   let lobbyIds = [];
+  let noteT = 0;
 
   const fx = new Fx();
   const audio = createAudio();
@@ -171,16 +172,21 @@ function boot(joined) {
     const spectating = screen === 'game' && room.spectating;
     const botKind = screen === 'title' || (m.phase === 'playing' && room.isHost) ? 'bot' : 'view';
     const keep = new Set();
+    let botIndex = -1;
     entries.forEach((e, i) => {
+      if (e.b) botIndex++;
       if (e.id === meId && (spectating || screen === 'title')) return;
       keep.add(e.id);
       const isMe = e.id === meId;
       const kind = isMe ? 'me' : e.b ? botKind : 'remote';
       let a = world.get(e.id);
       if (!a) {
+        // where it was last seen (a reload gets its last presence back), else a spot for the lobby or the ring round the rug
         let p;
         const pres = isMe ? room.me.presence : (room.players.get(e.id) || {}).presence;
-        if (pres && Number.isFinite(pres.x) && Number.isFinite(pres.y) && m.phase === 'lobby') p = { x: pres.x, y: pres.y };
+        const snap = e.b && m.phase === 'playing' && screen === 'game' ? session.lastBotPos(botIndex) : null;
+        if (snap) p = { x: snap[0], y: snap[1] };
+        else if (!e.b && pres && Number.isFinite(pres.x) && Number.isFinite(pres.y)) p = { x: pres.x, y: pres.y };
         else if (m.phase === 'lobby') p = lobbySpot(e.id);
         else p = spawnPoint(i, entries.length);
         world.seed = m.seed || 0;
@@ -197,7 +203,7 @@ function boot(joined) {
         else if (!person.name) person.name = 'Player';
         ensureAvatar(person);
       } else if (e.n) person.name = e.n;
-      person.color = colorOf(i);
+      person.color = colorOf(m.phase === 'lobby' && screen === 'game' ? hashStr(e.id) % 12 : i);
       a.color = person.color;
       a.name = person.name;
       if (screen === 'game' && m.phase === 'lobby') {
@@ -349,6 +355,14 @@ function boot(joined) {
       me.vx = me.vy = me.kx = me.ky = 0;
       return;
     }
+    if (F.ph === 'out' && F.out === me.id) {
+      // out: a shrug, and off to the side of the room (you can still dance there, as a ghost)
+      const tx = me.x < GOLD.x ? 0.9 : W - 0.9;
+      const d = tx - me.x;
+      meEnv.canSit = false;
+      stepActor(me, Math.abs(d) > 0.2 ? Math.sign(d) * 0.7 : 0, 0, dt, meEnv);
+      return;
+    }
     if (me.ghost) {
       if (inp.bump && cheerCd <= 0) {
         input.consume();
@@ -491,7 +505,7 @@ function boot(joined) {
       track.seats = g.seats.slice();
       if (g.ph === 'music' && (!first || F.now < 2500)) {
         if (g.step === 1 && g.game > 1) banner(`GAME ${g.game}!`, 1.5, '#ffd23f', 0.25, true);
-        else banner('DANCE!', 1.3, '#fff');
+        else banner('DANCE!', 1.5, '#fff');
       }
     }
     if (track.ph !== g.ph) {
@@ -741,9 +755,9 @@ function boot(joined) {
     }
     if (audio.ready()) {
       if (mode === 'off') audio.musicOff();
-      else if (mode === 'play') audio.musicOn(g.n % 6, Math.min(130, 112 + 2 * (g.step - 1)), 0.85);
-      else if (mode === 'party') audio.musicOn(3, 120, 0.6);
-      else audio.musicOn(((F.n % 6) + 6) % 6, 112, 0.42);
+      else if (mode === 'play') audio.musicOn(g.n % 6, Math.min(130, 112 + 2 * (g.step - 1)), 0.6);
+      else if (mode === 'party') audio.musicOn(3, 120, 0.45);
+      else audio.musicOn(((F.n % 6) + 6) % 6, 112, 0.3);
     }
     // the beat the floor lights and the dancing follow: the music's own when it plays, a steady one before the first tap
     if (F.music === 'play' || F.music === 'party') S.beat = audio.playing ? audio.beats() : S.beat + dt * (115 / 60);
@@ -800,6 +814,14 @@ function boot(joined) {
       if (acc > STEP * 6) acc = 0;
     }
     const F = world.field;
+    // music notes float out of the speaker while the music plays
+    if (F.music === 'play' || F.music === 'party') {
+      noteT -= dt;
+      if (noteT <= 0) {
+        noteT = 0.32 + Math.random() * 0.25;
+        fx.note(2.2, 0.9 + Math.random() * 0.6, ['#ff4fa3', '#33e0ff', '#ffe14d', '#8cff4d'][(Math.random() * 4) | 0], 1 + Math.random() * 0.9, -0.5 - Math.random() * 0.6);
+      }
+    }
     watchField(F);
     watchRecord(g, F);
     updateCountdown(m);
@@ -935,6 +957,10 @@ function boot(joined) {
   applySettings();
   resize();
   attach(joined);
+  // a hidden page gets no animation frames: the host's match still moves on (slowly) until the room hands the role to someone who is looking
+  setInterval(() => {
+    if (document.hidden && room.isHost && room.running && session) session.tick(room.matchNow());
+  }, 250);
   try {
     if (ow && ow.rooms && ow.rooms.on) ow.rooms.on('moved', (next) => next && typeof next.on === 'function' && attach(next));
   } catch (err) {

@@ -94,8 +94,8 @@ export class Fx {
     }
   }
 
-  note(x, y, color) {
-    this.spawn('note', x, y, { vx: (Math.random() - 0.3) * 0.9, vy: -1.3 - Math.random() * 0.6, life: 1.7, size: 0.22, color, rot: (Math.random() - 0.5) * 0.4 });
+  note(x, y, color, vx = (Math.random() - 0.3) * 0.9, vy = -1.3 - Math.random() * 0.6) {
+    this.spawn('note', x, y, { vx, vy, life: 2.2, size: 0.24, color, rot: (Math.random() - 0.5) * 0.4 });
   }
 
   floater(text, x, y, color = '#fff', size = 22) {

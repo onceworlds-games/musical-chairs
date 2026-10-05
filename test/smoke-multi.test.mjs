@@ -258,3 +258,85 @@ test('the host leaves in the middle of a game: the other page takes over and fin
     env.done();
   }
 });
+
+test('a guest reloads and the host reloads in the middle of a match: both come back where they were and the match finishes', async () => {
+  const env = setup();
+  try {
+    const server = new FakeServer({ latency: 40, seed: 31337 });
+    let A = await addPage(env, server, 'a', 'Ann', 'ra');
+    let B = await addPage(env, server, 'b', 'Bo', 'rb');
+    env.frames(500);
+    A.page.pointer(422, 390 * 0.78);
+    B.page.pointer(422, 390 * 0.78);
+    env.frames(800);
+    A.page.pointer(422 - 64, 84);
+    env.frames(300);
+    A.room.setReady(true);
+    B.room.setReady(true);
+    env.frames(3500);
+    assert.equal(B.room.match.phase, 'playing');
+    let pa = pilot(A.page, A.room, 1);
+    let pb = pilot(B.page, B.room, 2);
+    let reloadedB = false;
+    let reloadedA = false;
+    let guard = 0;
+    while (A.room.match.phase !== 'lobby' && B.room.match.phase !== 'lobby' && guard++ < 60 * 60 * 15) {
+      env.frame();
+      pa.step(env.ts);
+      pb.step(env.ts);
+      const g = (B.room.closed ? A : B).room.state.g;
+      if (!reloadedB && g && g.n >= 2 && g.ph === 'race') {
+        // the guest reloads during a race
+        reloadedB = true;
+        pb.release();
+        const before = { ...B.room.me.presence };
+        B.page.stopped = true;
+        const room = server.reload('b');
+        const ow = makeOw(room);
+        const page = newPage(ow);
+        await import('../game/main.js?rb2');
+        env.pages.splice(env.pages.indexOf(B.page), 1);
+        env.pages.push(page);
+        B = { room, ow, page };
+        env.frames(300);
+        page.pointer(422, 390 * 0.78); // the title is back: tap to get in
+        env.frames(300);
+        assert.ok(room.spectating === false, 'still in the match');
+        assert.ok(room.me.presence, 'back in the arena');
+        assert.ok(Math.hypot(room.me.presence.x - before.x, room.me.presence.y - before.y) < 3, `carries on from where it was: ${JSON.stringify(before)} -> ${JSON.stringify(room.me.presence)}`);
+        pb = pilot(page, room, 5);
+      }
+      if (reloadedB && !reloadedA && g && g.n >= 4 && g.ph === 'music') {
+        // the host reloads during the music: the role moves to the guest, which carries on
+        reloadedA = true;
+        pa.release();
+        A.page.stopped = true;
+        const room = server.reload('a');
+        const ow = makeOw(room);
+        const page = newPage(ow);
+        await import('../game/main.js?ra2');
+        env.pages.splice(env.pages.indexOf(A.page), 1);
+        env.pages.push(page);
+        A = { room, ow, page };
+        env.frames(300);
+        page.pointer(422, 390 * 0.78);
+        env.frames(300);
+        assert.equal(B.room.host, 'b');
+        assert.equal(B.room.state.g.by, 'b', 'the guest took the match over');
+        pa = pilot(page, room, 7);
+      }
+    }
+    pa.release();
+    pb.release();
+    assert.ok(reloadedA && reloadedB);
+    assert.equal(B.room.match.phase, 'lobby');
+    const g = B.room.state.g;
+    assert.equal(g.ph, 'final');
+    assert.equal(g.game, 1);
+    assert.equal(g.n, 7);
+    assert.equal(g.rank.length, 8);
+    assert.deepEqual(env.errors, []);
+  } finally {
+    env.done();
+  }
+});

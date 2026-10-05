@@ -235,10 +235,14 @@ export class World {
     }
     for (const a of this.list) {
       a.ghost = F.playing && !F.alive.has(a.id);
+      const i = F.seats.indexOf(a.id);
       if (a.kind === 'remote' || a.kind === 'view') {
-        const i = F.seats.indexOf(a.id);
         a.chair = i;
         a.sat = i >= 0;
+      } else if (i >= 0 && a.chair < 0 && F.ph === 'race') {
+        // the host has given this one a chair it doesn't remember (a reload, a new host): sit down
+        a.chair = i;
+        a.sat = true;
       }
     }
   }

@@ -1,10 +1,16 @@
 // A just-enough browser for running main.js in node: a canvas whose context accepts every call, window and document
 // stand-ins, key and pointer events, an animation-frame loop you drive by hand and a fake Web Audio. Not a test itself.
 
-export function fakeCtx() {
+export function fakeCtx(hashing = false) {
   const state = { globalAlpha: 1, lineWidth: 1, font: '10px sans', textAlign: 'left', textBaseline: 'alphabetic', fillStyle: '#000', strokeStyle: '#000', lineCap: 'butt', lineJoin: 'miter', miterLimit: 10, globalCompositeOperation: 'source-over' };
   const grad = { addColorStop() {} };
   let depth = 0;
+  let hash = 2166136261; // a running hash of everything drawn: two identical pictures draw identically
+  const mix = (v) => {
+    if (!hashing) return;
+    const t = typeof v === 'number' ? String(Math.round(v * 1000) / 1000) : String(v);
+    for (let i = 0; i < t.length; i++) hash = Math.imul(hash ^ t.charCodeAt(i), 16777619) >>> 0;
+  };
   return new Proxy(
     {},
     {
@@ -20,9 +26,14 @@ export function fakeCtx() {
           if (!img) throw new Error('drawImage of nothing');
         };
         if (k === 'depth') return depth;
+        if (k === 'hash') return hash;
         if (k in state) return state[k];
         // every other call: like a real canvas, refuse what would throw there, and flag NaN (which a real one silently skips)
         return (...args) => {
+          if (hashing) {
+            mix(String(k));
+            for (const a of args) mix(a);
+          }
           for (const a of args) if (typeof a === 'number' && !Number.isFinite(a)) throw new Error(`canvas ${String(k)}() called with ${a}`);
           if (k === 'arc' && args[2] < 0) throw new Error('arc with a negative radius');
           if (k === 'ellipse' && (args[2] < 0 || args[3] < 0)) throw new Error('ellipse with a negative radius');
@@ -31,6 +42,10 @@ export function fakeCtx() {
       },
       set(t, k, v) {
         if (typeof v === 'number' && !Number.isFinite(v)) throw new Error(`canvas property ${String(k)} set to ${v}`);
+        if (hashing) {
+          mix(String(k));
+          mix(v);
+        }
         state[k] = v;
         return true;
       },
@@ -50,8 +65,11 @@ class FakeAudioParam {
 }
 
 export class FakeAudioContext {
+  get currentTime() {
+    return (Date.now() - this.t0) / 1000;
+  }
   constructor() {
-    this.currentTime = 0;
+    this.t0 = Date.now();
     this.sampleRate = 8000;
     this.state = 'suspended';
     this.destination = {};
@@ -106,6 +124,7 @@ export function installGlobals({ width = 844, height = 390 } = {}) {
     }
   };
   g.requestAnimationFrame = (fn) => {
+    if (!fn.page) fn.page = dom.page;
     dom.pending.add(fn);
     return 1;
   };
@@ -126,7 +145,7 @@ export function installGlobals({ width = 844, height = 390 } = {}) {
   return dom.shared;
 }
 
-function makeCanvas() {
+function makeCanvas(hashing = false) {
   const listeners = {};
   return {
     width: 0,
@@ -134,7 +153,7 @@ function makeCanvas() {
     style: {},
     ctx: null,
     getContext() {
-      if (!this.ctx) this.ctx = fakeCtx();
+      if (!this.ctx) this.ctx = fakeCtx(hashing);
       return this.ctx;
     },
     addEventListener(type, fn) {
@@ -146,8 +165,8 @@ function makeCanvas() {
 }
 
 /** A page (a tab): its own canvas and its own listeners. Import main.js right after calling this. */
-export function newPage(ow) {
-  const page = { canvas: makeCanvas(), listeners: {}, ow };
+export function newPage(ow, { hash = false } = {}) {
+  const page = { canvas: makeCanvas(hash), listeners: {}, ow };
   dom.page = page;
   globalThis.onceworlds = ow;
   page.key = (type, code, extra = {}) => {
@@ -168,7 +187,10 @@ export function newPage(ow) {
 export function runFrame(ts) {
   const fns = [...dom.pending];
   dom.pending.clear();
-  for (const fn of fns) fn(ts);
+  for (const fn of fns) {
+    if (fn.page && fn.page.stopped) continue; // a closed tab
+    fn(ts);
+  }
 }
 
 export function pendingFrames() {

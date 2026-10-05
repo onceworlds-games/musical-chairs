@@ -50,6 +50,40 @@ export class FakeServer {
     return room;
   }
 
+  /**
+   * A page reload: the same player comes back with a new page (their seat held, their last presence handed back). If they were
+   * the host the role has moved to someone else, and stays there.
+   */
+  reload(id) {
+    const old = this.clients.get(id);
+    old.closed = true;
+    const room = new FakeRoom(this, id, old.me.name);
+    for (const other of this.clients.values()) {
+      if (other === old) continue;
+      room.players.set(other.me.id, { id: other.me.id, name: other.me.name, presence: other.me.presence, team: 0, ...(this.ready.has(other.me.id) ? { ready: true } : {}) });
+    }
+    room.me.presence = old.me.presence;
+    room.state = JSON.parse(JSON.stringify(this.state));
+    if (this.hostId === id) {
+      const next = this.order.find((x) => x !== id);
+      if (next) {
+        this.hostId = next;
+        for (const other of this.clients.values()) {
+          if (other === old) continue;
+          this.later(() => other.apply(() => {
+            other.host = next;
+            other.emit('host', next);
+          }));
+        }
+      }
+    }
+    room.host = this.hostId;
+    room.match = JSON.parse(JSON.stringify(this.match));
+    if (room.match.phase !== 'lobby') room.frozen = { ...room.chosen() };
+    this.clients.set(id, room);
+    return room;
+  }
+
   leave(id) {
     const room = this.clients.get(id);
     if (!room) return;
