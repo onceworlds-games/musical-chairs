@@ -349,18 +349,18 @@ function drawChair(ctx, S, i, c, airborne) {
   let p = clamp(sinceStop / DROP_MS, 0, 1);
   let h = (1 - ease.inQuad(p)) * 9;
   let bounce = 0;
-  let squash = 1;
+  let sq = 1;
   if (sinceStop > DROP_MS) {
     const lt = (sinceStop - DROP_MS) / 1000;
     bounce = 0.5 * Math.exp(-7 * lt) * Math.abs(Math.sin(lt * 15));
-    squash = 1 - 0.22 * Math.exp(-9 * lt) * Math.cos(lt * 22);
+    sq = 1 - 0.22 * Math.exp(-9 * lt) * Math.cos(lt * 22);
   }
   let shadowK = 0.4 + 0.6 * p;
   if (F.riseAt < Infinity && F.now > F.riseAt) {
     const rp = clamp((F.now - F.riseAt) / 400, 0, 1);
     h = ease.inCubic(rp) * 9;
     bounce = 0;
-    squash = 1 + 0.12 * Math.sin(rp * Math.PI);
+    sq = 1 + 0.12 * Math.sin(rp * Math.PI);
     shadowK = 1 - rp * 0.6;
     p = 1 - rp;
   }
@@ -369,6 +369,16 @@ function drawChair(ctx, S, i, c, airborne) {
   const x = cam.ox + c[0] * s;
   const y = cam.oy + c[1] * s;
   const color = CHAIR_COLORS[i % CHAIR_COLORS.length];
+  // a free chair glows: this is what to run for
+  if (!airborne && F.ph === 'race' && F.now >= F.dropAt && F.now < F.riseAt && (F.seats[i] === null || F.seats[i] === undefined)) {
+    const pulse = 0.5 + 0.5 * Math.sin(S.t * 8);
+    ctx.save();
+    ellipse(ctx, x, y + 0.2 * s, (0.98 + pulse * 0.12) * s, (0.62 + pulse * 0.08) * s);
+    ctx.lineWidth = Math.max(2.5, 0.09 * s);
+    ctx.strokeStyle = `rgba(255,255,255,${0.45 + 0.4 * pulse})`;
+    ctx.stroke();
+    ctx.restore();
+  }
   // the shadow stays on the floor and grows as the chair comes down
   ctx.save();
   ellipse(ctx, x + 0.1 * s, y + 0.3 * s, 0.62 * s * shadowK, 0.3 * s * shadowK);
@@ -378,7 +388,7 @@ function drawChair(ctx, S, i, c, airborne) {
   ctx.restore();
   ctx.save();
   ctx.translate(x, y - (h + bounce) * s);
-  ctx.scale(1 + (1 - squash) * 0.8, squash);
+  ctx.scale(1 + (1 - sq) * 0.8, sq);
   chairSprite(ctx, s, color);
   ctx.restore();
 }
@@ -530,12 +540,12 @@ function face(ctx, k, f, expr, cy, r, t) {
     const big = f.eye === 1 || expr === 'ohh';
     for (const sx of [-1, 1]) {
       const blink = Math.sin(t * 0.9 + sx) > 0.985;
-      ellipse(ctx, sx * ex * k, ey, (big ? 0.08 : 0.055) * k, (blink ? 0.01 : f.eye === 2 ? 0.1 : big ? 0.09 : 0.07) * k);
+      ellipse(ctx, sx * ex * k, ey, (big ? 0.1 : 0.07) * k, (blink ? 0.01 : f.eye === 2 ? 0.115 : big ? 0.11 : 0.085) * k);
       if (big) {
         ctx.fillStyle = '#fff';
         ctx.fill();
         ctx.stroke();
-        ellipse(ctx, sx * ex * k + 0.01 * k, ey + 0.01 * k, 0.04 * k, 0.05 * k);
+        ellipse(ctx, sx * ex * k + 0.012 * k, ey + 0.012 * k, 0.05 * k, 0.06 * k);
         ctx.fillStyle = INK;
         ctx.fill();
       } else ctx.fill();

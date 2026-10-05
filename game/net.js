@@ -216,7 +216,10 @@ export class Session {
     if (this.engine.update(now, this.view)) this.dirty = true;
     const g = this.engine.g;
     const t = performance.now();
-    if (this.dirty && (g.ph !== this.lastPh || g.n !== this.lastN || t - this.lastWrite >= 90)) this.write();
+    if (this.dirty && (this.engine.urgent || g.ph !== this.lastPh || g.n !== this.lastN || t - this.lastWrite >= 90)) {
+      this.engine.urgent = false;
+      this.write();
+    }
     if (this.engine.isOver(now) && t - this.endTry > 2000) {
       this.endTry = t;
       room.endMatch();
@@ -292,7 +295,7 @@ export class Session {
 
   rateOk(map, id, ms) {
     const t = performance.now();
-    if (t - (map.get(id) || 0) < ms) return false;
+    if (t - (map.has(id) ? map.get(id) : -Infinity) < ms) return false;
     map.set(id, t);
     return true;
   }
@@ -308,21 +311,23 @@ export class Session {
     if (len < 0.2) return;
     const nx = d.dx / len;
     const ny = d.dy / len;
-    // who bumped: the sender, or (from the host only) one of its bots
-    const byBot = typeof d.by === 'string' && from.id === room.host && this.bots.has(d.by);
+    // who bumped: the sender, or (from the host only) one of the bots it runs
+    const botActor = typeof d.by === 'string' ? this.world.get(d.by) : null;
+    const byBot = Boolean(botActor) && from.id === room.host && (botActor.kind === 'bot' || botActor.kind === 'view');
     const attackerId = byBot ? d.by : from.id;
     const attacker = this.world.get(attackerId);
     if (!attacker || attacker.ghost || attacker.chair >= 0) return;
-    if (!byBot && !this.rateOk(this.bumpAt, from.id, 700)) return;
     if (!lobby && !this.world.field.alive.has(attackerId)) return;
     const targetId = d.to;
     if (targetId === me) {
       const mine = this.world.get(me);
       if (!mine || Math.hypot(mine.x - attacker.x, mine.y - attacker.y) > 2.8) return;
+      if (!byBot && !this.rateOk(this.bumpAt, from.id, 700)) return;
       if (this.hooks.knockMe) this.hooks.knockMe(nx, ny, attackerId);
     } else if (this.active && this.bots.has(targetId)) {
       const bot = this.world.get(targetId);
       if (!bot || Math.hypot(bot.x - attacker.x, bot.y - attacker.y) > 2.8) return;
+      if (!byBot && !this.rateOk(this.bumpAt, from.id, 700)) return;
       if (knock(bot, nx, ny)) this.engine.noteBump(attackerId);
     }
   }

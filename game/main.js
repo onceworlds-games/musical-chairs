@@ -749,7 +749,7 @@ function boot(joined) {
     if (F.music === 'play' || F.music === 'party') S.beat = audio.playing ? audio.beats() : S.beat + dt * (115 / 60);
   }
 
-    function frame(ts) {
+  function frame(ts) {
     requestAnimationFrame(frame);
     try {
       tick(ts);
@@ -776,6 +776,8 @@ function boot(joined) {
     S.flash = Math.max(0, S.flash - dt * 5);
     if (S.results && S.t > S.results.until) S.results = null;
     const m = room.match;
+    // whoever runs the match runs it from the game screen, even if they never tapped PLAY
+    if (screen === 'title' && room.isHost && m.phase === 'playing') startPlay();
     const g = currentG();
     S.g = g;
     S.lobby = screen === 'game' && m.phase === 'lobby';
@@ -813,11 +815,12 @@ function boot(joined) {
 
   function publish() {
     const me = S.me;
-    if (!me || !room.connected || screen !== 'game') return;
-    try {
-      room.setPresence({ x: r2(me.x), y: r2(me.y), vx: r1(me.vx + me.kx), vy: r1(me.vy + me.ky), b: me.bumpT > 0 ? 1 : 0, w: me.wob > 0 ? 1 : 0, s: me.chair >= 0 ? 1 : 0, c: cheers });
-    } catch (err) {
-      /* a presence that can't be sent is skipped */
+    if (me && room.connected && screen === 'game') {
+      try {
+        room.setPresence({ x: r2(me.x), y: r2(me.y), vx: r1(me.vx + me.kx), vy: r1(me.vy + me.ky), b: me.bumpT > 0 ? 1 : 0, w: me.wob > 0 ? 1 : 0, s: me.chair >= 0 ? 1 : 0, c: cheers });
+      } catch (err) {
+        /* a presence that can't be sent is skipped */
+      }
     }
     if (room.isHost && room.match.phase === 'playing') session.publishBots(room.matchNow());
   }
@@ -920,10 +923,12 @@ function boot(joined) {
 
   window.addEventListener('resize', () => resize());
   try {
-    if (ow && ow.settings && ow.settings.on) ow.settings.on('change', () => {
-      applySettings();
-      resize();
-    });
+    if (ow && ow.settings && ow.settings.on) {
+      ow.settings.on('change', () => {
+        applySettings();
+        resize();
+      });
+    }
   } catch (err) {
     /* ignore */
   }

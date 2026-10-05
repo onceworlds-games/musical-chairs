@@ -339,6 +339,7 @@ export class Engine {
     this.g = g;
     this.claims = []; // waiting claims, in the host's memory only: a page asks again if one is lost
     this.dirty = false;
+    this.urgent = false; // a seat was given out: the host writes it at once, so a loser sees the bonk quickly
   }
 
   static create({ mid, by, seed, roster, games, now }) {
@@ -558,6 +559,7 @@ export class Engine {
       st[0] += 1;
       st[1] += ms;
       changed = true;
+      this.urgent = true;
     }
     this.claims = keep;
     return changed;

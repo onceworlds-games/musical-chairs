@@ -33,6 +33,7 @@ function button(ctx, S, id, text, cx, cy, w, h, o = {}) {
   ctx.save();
   ctx.translate(cx, cy);
   ctx.scale(sc, sc);
+  if (!enabled) ctx.globalAlpha = 0.8;
   const r = h * 0.3;
   const lw = Math.max(3, h * 0.07);
   roundRect(ctx, -w / 2, -h / 2 + h * 0.1, w, h, r);
@@ -336,15 +337,17 @@ export function drawPodium(ctx, S, g, age) {
   ctx.fillStyle = 'rgba(20,5,50,0.5)';
   ctx.fillRect(0, 0, w, h);
   const myRank = rank.indexOf(S.meId);
-  let y = 0.085 * h;
+  const y = 0.085 * h;
   if (myRank >= 3) {
-    const pw = 180 * u;
+    // "You: 4th", beside the podium
+    const pw = 150 * u;
     const ph = 38 * u;
-    roundRect(ctx, w / 2 - pw / 2, y - ph / 2, pw, ph, ph / 2);
+    const px = Math.max(pw / 2 + 10 * u, w / 2 - bw * 1.5 - gap - pw / 2 - 14 * u);
+    const py = baseY - 26 * u;
+    roundRect(ctx, px - pw / 2, py - ph / 2, pw, ph, ph / 2);
     fillStroke(ctx, 'rgba(45,22,80,0.9)', 3, '#ffd23f');
-    drawFace(ctx, S, S.meId, w / 2 - pw / 2 + ph * 0.55, y, ph * 0.38, 'normal');
-    label(ctx, `You: ${ORD[myRank] ?? myRank + 1 + 'th'}`, w / 2 + ph * 0.3, y, ph * 0.6, { fill: '#ffd23f' });
-    y += 0.1 * h;
+    drawFace(ctx, S, S.meId, px - pw / 2 + ph * 0.55, py, ph * 0.38, 'normal');
+    label(ctx, `You: ${ORD[myRank] ?? `${myRank + 1}th`}`, px + ph * 0.3, py, ph * 0.56, { fill: '#ffd23f' });
   }
   const aw = awardsOf(g);
   const awards = [];
@@ -363,8 +366,11 @@ export function drawPodium(ctx, S, g, age) {
       fillStroke(ctx, 'rgba(45,22,80,0.92)', 3, '#7bed4f');
       if (a.icon === 'bolt') bolt(ctx, -pw / 2 + ph * 0.55, 0, ph * 0.3);
       else {
-        circle(ctx, -pw / 2 + ph * 0.55, 0, ph * 0.26);
+        // an impact star: a bump
+        starPath(ctx, -pw / 2 + ph * 0.55, 0, ph * 0.34, 8, 0.55, -Math.PI / 2);
         fillStroke(ctx, '#ff7f32', 2.5);
+        circle(ctx, -pw / 2 + ph * 0.55, 0, ph * 0.1);
+        fillStroke(ctx, '#fff6a0', 0);
       }
       label(ctx, a.title, -pw / 2 + ph * 0.95, -ph * 0.16, ph * 0.34, { align: 'left', fill: '#7bed4f', lw: 4 });
       ctx.font = font(ph * 0.34);
