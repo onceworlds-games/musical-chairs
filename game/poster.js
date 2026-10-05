@@ -78,7 +78,7 @@ function cover(ctx, S) {
   // the eighth leaps for the chair everyone is heading to
   cast(S, 'p7', 7, 13.6, 9.3, { toX: 11.6, toY: 7.4, hop: 0.95, lean: -0.3, speed: 5.5, sy: 1.1 });
   field(S, { chairs, now: 480 });
-  for (const c of chairs) S.fx.puff(c[0], c[1] + 0.3, 6, 0.3);
+  // (no landing puffs: frozen in a still they hide the chairs)
   S.fx.confetti(10, 8, 24, 1.6, 0.8);
   S.fx.update(0.25);
   frame(ctx, S);
@@ -97,7 +97,7 @@ function action(ctx, S) {
   field(S, { chairs: [chair], now: 520 });
   S.fx.sparks(10, 6, 12);
   S.fx.spawn('star', 10, 5.2, { life: 5, size: 0.4, color: '#fff6a0', rot: 0.3 });
-  S.fx.puff(10, 6.8, 7, 0.3);
+  // (no puff: frozen it hides the bump)
   S.fx.update(0.1);
   frame(ctx, S);
 }
