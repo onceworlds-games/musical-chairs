@@ -2,7 +2,7 @@
 // main.js boots the page, runs the loop and the screens. The rules live in rules.js (the Engine the host's page runs),
 // movement in sim.js, the bots in bots.js, drawing in draw.js and ui.js, the room and messages in net.js.
 
-import { W, H, RADIUS, GOLD, BOT_NAMES, makeRoster, spawnPoint, colorOf, sanitizeG, sinceDip, hashStr } from './rules.js';
+import { W, H, RADIUS, GOLD, BOT_NAMES, DROP_MS, makeRoster, spawnPoint, colorOf, sanitizeG, sinceDip, hashStr } from './rules.js';
 import { stepActor, tryBump, knock, WOBBLE } from './sim.js';
 import { World, Practice, syncField, canSit } from './world.js';
 import { Fx } from './fx.js';
@@ -561,7 +561,8 @@ function boot(joined) {
   function onMySeat(g, chair) {
     const me = S.me;
     fx.floater('SAFE!', me.x, me.y - 1.4, '#7bed4f', 26);
-    if (g.sat[me.id] !== undefined && g.sat[me.id] <= 1000 && track.quickDone !== `${g.mid}.${g.n}`) {
+    // sat is counted from the moment the chairs landed: a second after the music stopped is 1000 - DROP_MS after that
+    if (g.sat[me.id] !== undefined && g.sat[me.id] <= 1000 - DROP_MS && track.quickDone !== `${g.mid}.${g.n}`) {
       track.quickDone = `${g.mid}.${g.n}`;
       award('quick-sit');
       fx.floater('FAST!', me.x, me.y - 2, '#ffd23f', 22);
@@ -577,6 +578,13 @@ function boot(joined) {
       track.landed = '';
       track.rose = '';
     }
+    if (screen === 'title') {
+      // the arena behind the title just plays: no banners, no flashes
+      track.music = F.music;
+      track.landed = F.rid;
+      track.rose = F.rid;
+      return;
+    }
     if (F.music !== track.music) {
       const prev = track.music;
       track.music = F.music;
@@ -585,7 +593,7 @@ function boot(joined) {
         S.flash = 1;
         S.dim = 1;
         fx.addShake(0.25);
-        banner('GRAB A CHAIR!', 1.5, '#ffd23f', 0.22, true);
+        banner('GRAB A CHAIR!', 1.5, '#ffd23f', F.mode === 'practice' ? 0.52 : 0.22, true);
       } else if (prev === 'play' && F.music === 'dip') {
         audio.sfx('dun');
         fx.addShake(0.12);

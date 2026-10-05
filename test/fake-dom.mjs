@@ -199,10 +199,17 @@ export function pendingFrames() {
 
 /** A platform stand-in for one page: everything the game calls on window.onceworlds. */
 export function makeOw(room, extra = {}) {
-  const calls = { badges: [], saves: {}, scores: [], controls: [], orientation: [] };
+  const calls = { badges: [], saves: {}, scores: [], controls: [], orientation: [], joins: 0, moved: [], settings: [] };
   const ow = {
     calls,
-    rooms: { join: async () => room, on() {}, current: room },
+    rooms: {
+      join: async () => {
+        calls.joins++;
+        return calls.nextRoom || room;
+      },
+      on: (event, fn) => calls.moved.push([event, fn]),
+      current: room,
+    },
     ui: { setOrientation: (o) => calls.orientation.push(o), setMenuPosition() {}, requestFullscreen() {}, showInvite() {} },
     controls: {
       stick: { x: 0, y: 0 },
@@ -215,7 +222,7 @@ export function makeOw(room, extra = {}) {
         return ow.controls.held.has(id);
       },
     },
-    settings: { quality: 'high', reducedMotion: false, scale: 1, choice: 'auto', pixelRatio: () => 1, on() {} },
+    settings: { quality: 'high', reducedMotion: false, scale: 1, choice: 'auto', pixelRatio: () => 1, on: (event, fn) => calls.settings.push([event, fn]) },
     now: () => Date.now(),
     save: {
       get: async (k) => calls.saves[k] ?? null,
