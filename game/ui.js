@@ -106,7 +106,7 @@ export function drawTitle(ctx, S) {
 
 export function drawLobbyTop(ctx, S, host, games) {
   const { w, u } = S;
-  const chip = 54 * u;
+  const chip = Math.max(46, 54 * u);
   const gap = 10 * u;
   const total = 3 * chip + 2 * gap;
   const y = 84 * u;
@@ -160,7 +160,7 @@ export function drawHud(ctx, S, g, meId) {
       ctx.lineCap = 'butt';
     }
   });
-  if (g.ph === 'music' || g.ph === 'race' || g.ph === 'out') label(ctx, `ROUND ${g.step}`, w / 2, y + r + 17 * u, 15 * u, { lw: 4 });
+  if (g.ph === 'music' || g.ph === 'race' || g.ph === 'out') label(ctx, `ROUND ${g.step}`, w / 2, y + r + 17 * u, Math.max(16, 16 * u), { lw: 4 });
   // you
   const me = meId && roster.some((e) => e.id === meId);
   if (me) {

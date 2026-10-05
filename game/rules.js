@@ -497,14 +497,13 @@ export class Engine {
     for (const id of g.alive) {
       if (g.seats.includes(id)) continue;
       const p = view.pos(id);
-      let d = Infinity;
+      let d = 1e9; // nobody knows where they are: as far as can be
       if (p) {
         d = Infinity;
         g.chairs.forEach((c, i) => {
           if (g.seats[i] === null) d = Math.min(d, Math.hypot(p.x - c[0], p.y - c[1]));
         });
       }
-      if (!p) d = 1e9;
       if (d > far) {
         far = d;
         loser = id;

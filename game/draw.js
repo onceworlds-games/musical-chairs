@@ -826,7 +826,7 @@ export function drawName(ctx, S, a) {
   const name = (person && person.name) || a.name;
   if (!name) return;
   const { cam } = S;
-  const fs = clamp(cam.s * 0.4, 10, 20);
+  const fs = clamp(cam.s * 0.46, 11, 20);
   const at = placeOf(S.world.field, a);
   const x = cam.ox + at.x * cam.s;
   const y = cam.oy + at.y * cam.s + 0.42 * cam.s * ACTOR;

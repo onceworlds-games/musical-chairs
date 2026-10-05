@@ -277,6 +277,7 @@ function boot(joined) {
     if (a.kind === 'me') {
       audio.sfx('sit', chair);
       squash(a, 0.3);
+      if (F.mode === 'practice') fx.floater('SAFE!', a.x, a.y - 1.4, '#7bed4f', 26);
     }
     if (F.mode === 'match' && session) session.claim(a, chair);
   }
@@ -687,7 +688,7 @@ function boot(joined) {
     }
   }
 
-  function step(dt, g) {
+  function step(dt, g, frozen) {
     const m = room.match;
     const playing = m.phase === 'playing' && screen === 'game';
     if (m.phase === 'playing' && !room.running) return; // too few players: the match waits, and so does everything in it
@@ -701,7 +702,7 @@ function boot(joined) {
     }
     if (F.mode === 'practice') practiceSeats();
     world.afterField();
-    stepMe(dt);
+    if (!frozen) stepMe(dt); // a hit-stop holds only my own character: the bots and the match go on for everyone else
     if (screen === 'title' || (playing && room.isHost)) world.stepBots(dt);
     if (playing && room.isHost) session.tick(room.matchNow());
   }
@@ -810,17 +811,14 @@ function boot(joined) {
       const botIds = (g ? g.roster : localRoster(m)).filter((e) => e.b).map((e) => e.id);
       session.applyBots(room.matchNow(), botIds);
     }
-    if (fx.freeze > 0) acc = 0;
-    else {
-      acc += dt;
-      let n = 0;
-      while (acc >= STEP && n < 6) {
-        step(STEP, g);
-        acc -= STEP;
-        n++;
-      }
-      if (acc > STEP * 6) acc = 0;
+    acc += dt;
+    let n = 0;
+    while (acc >= STEP && n < 6) {
+      step(STEP, g, fx.freeze > 0);
+      acc -= STEP;
+      n++;
     }
+    if (acc > STEP * 6) acc = 0;
     const F = world.field;
     // music notes float out of the speaker while the music plays
     if (F.music === 'play' || F.music === 'party') {

@@ -102,7 +102,6 @@ export class Practice {
     this.seed = seed;
     this.cached = -1;
     this.spots = [];
-    this.count = 4;
   }
 
   /** Fills `F` for the clock `clock` (ms) with `count` chairs. */
