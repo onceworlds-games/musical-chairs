@@ -1,9 +1,8 @@
-// Everything drawn over the room: the title, the lobby's settings, the HUD, the countdown, banners, the scoreboard between
-// games and the podium. Big words, icons over text, thick outlines. `S` is the scene described in draw.js, plus:
+// Everything drawn over the room: the lobby's settings, the HUD, banners, the scoreboard between games and the podium. Big words, icons over text, thick outlines. `S` is the scene described in draw.js, plus:
 //   u (a size unit that grows with the screen), ui (buttons), names(id), info(id).
 
 import { COLORS, awardsOf } from './rules.js';
-import { INK, SHADOW, clamp, ease, pop, label, font, roundRect, circle, fillStroke, starPath, fitName, chairIcon, shade } from './gfx.js';
+import { INK, SHADOW, clamp, ease, pop, label, font, roundRect, circle, fillStroke, starPath, fitName, shade } from './gfx.js';
 import { drawFace } from './draw.js';
 
 /** Buttons are registered while drawing and hit-tested by the pointer. */
@@ -85,23 +84,6 @@ export function drawLogo(ctx, S, size, ys) {
   });
 }
 
-export function drawTitle(ctx, S) {
-  const { w, h, u } = S;
-  ctx.fillStyle = 'rgba(30,8,70,0.28)';
-  ctx.fillRect(0, 0, w, h);
-  const size = Math.min(w * 0.17, h * 0.27);
-  const y1 = h * 0.2 + size * 0.1;
-  const y2 = h * 0.46 + size * 0.1;
-  drawLogo(ctx, S, size, [y1, y2]);
-  // a chair either side of the name says what it is
-  const off = Math.min(size * 2.35, w / 2 - size * 0.5);
-  chairIcon(ctx, w / 2 - off, y2, size * 0.8, '#ff4757');
-  chairIcon(ctx, w / 2 + off, y2, size * 0.8, '#2f9bff');
-  const bw = clamp(w * 0.3, 190 * u, 360 * u);
-  const bh = clamp(h * 0.2, 62 * u, 100 * u);
-  button(ctx, S, 'play', 'PLAY', w / 2, h * 0.78, bw, bh, { icon: 'play', pulse: true });
-}
-
 // ---------------------------------------------------------------- lobby: the settings
 
 export function drawLobbyTop(ctx, S, host, games) {
@@ -181,47 +163,7 @@ export function drawHud(ctx, S, g, meId) {
   }
 }
 
-export function drawWatching(ctx, S) {
-  const { w, u } = S;
-  const pw = 128 * u;
-  const ph = 34 * u;
-  const px = w - pw - 12;
-  roundRect(ctx, px, 10, pw, ph, ph / 2);
-  fillStroke(ctx, 'rgba(45,22,80,0.85)', 2.5, '#fff');
-  // an eye
-  ctx.save();
-  ctx.translate(px + ph * 0.6, 10 + ph / 2);
-  ctx.beginPath();
-  ctx.ellipse(0, 0, ph * 0.3, ph * 0.2, 0, 0, Math.PI * 2);
-  fillStroke(ctx, '#fff', 2);
-  circle(ctx, 0, 0, ph * 0.11);
-  ctx.fillStyle = INK;
-  ctx.fill();
-  ctx.restore();
-  label(ctx, 'WATCHING', px + pw * 0.6, 10 + ph / 2, ph * 0.46, { lw: 4 });
-}
-
 // ---------------------------------------------------------------- big moments
-
-export function drawCountdown(ctx, S, text, age) {
-  const { w, h } = S;
-  const size = Math.min(w, h) * (text === 'GO!' ? 0.46 : 0.62);
-  const pp = ease.outBack(clamp(age / 0.35, 0, 1));
-  const fill = text === '3' ? '#ff6b6b' : text === '2' ? '#ffd23f' : text === '1' ? '#7bed4f' : '#2ed573';
-  ctx.fillStyle = 'rgba(20,5,50,0.2)';
-  ctx.fillRect(0, 0, w, h);
-  if (text === 'GO!') {
-    ctx.save();
-    ctx.translate(w / 2, h * 0.5);
-    ctx.rotate(S.t * 0.5);
-    starPath(ctx, 0, 0, size * (0.5 + age * 0.4), 12, 0.6);
-    ctx.globalAlpha = Math.max(0, 0.55 - age * 0.5);
-    ctx.fillStyle = '#fff6a0';
-    ctx.fill();
-    ctx.restore();
-  }
-  label(ctx, text, w / 2, h * 0.5, size, { fill, scale: Math.max(0.01, 0.4 + 0.6 * pp), lw: size * 0.16, drop: size * 0.05, alpha: clamp(1.5 - age * 0.6, 0, 1) });
-}
 
 export function drawBanner(ctx, S, b) {
   const age = S.now - b.t0;

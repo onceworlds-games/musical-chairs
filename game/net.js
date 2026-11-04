@@ -33,7 +33,6 @@ export class SoloRoom {
     this.match = { phase: 'lobby', n: 0, min: 1 };
     this.chosen = { rounds: 2 };
     this.listeners = new Map();
-    this.timer = null;
     this.t0 = Date.now();
   }
   get isHost() {
@@ -53,9 +52,6 @@ export class SoloRoom {
   }
   get settings() {
     return this.chosen;
-  }
-  get allReady() {
-    return true;
   }
   matchNow() {
     return this.match.phase === 'playing' ? Date.now() - this.match.startedAt : 0;
@@ -85,14 +81,6 @@ export class SoloRoom {
     else this.state[k] = v;
   }
   send() {}
-  setReady(v) {
-    if (v) this.me.ready = true;
-    else delete this.me.ready;
-  }
-  clearReady() {
-    delete this.me.ready;
-  }
-  hideLobby() {}
   setSetting(id, v) {
     if (id === 'rounds' && [1, 2, 3].includes(v)) {
       this.chosen = { rounds: v };
@@ -102,17 +90,10 @@ export class SoloRoom {
   startMatch() {
     if (this.match.phase !== 'lobby') return;
     const n = this.match.n + 1;
-    this.match = { phase: 'starting', n, min: 1, id: `solo${n}`, seed: Math.floor(Math.random() * 4294967296), participants: [this.me.id], startsAt: Date.now() + 3000 };
-    this.emit('starting', this.match);
-    this.timer = setTimeout(() => {
-      const prev = this.match;
-      this.match = { ...prev, phase: 'playing', startedAt: Date.now() };
-      delete this.match.startsAt;
-      this.emit('matchstart', this.match);
-    }, 3000);
+    this.match = { phase: 'playing', n, min: 1, id: `solo${n}`, seed: Math.floor(Math.random() * 4294967296), participants: [this.me.id], startedAt: Date.now() };
+    this.emit('matchstart', this.match);
   }
   endMatch() {
-    clearTimeout(this.timer);
     if (this.match.phase === 'lobby') return;
     const prev = this.match;
     this.match = { phase: 'lobby', n: prev.n, min: 1 };

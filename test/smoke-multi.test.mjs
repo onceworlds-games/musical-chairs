@@ -169,7 +169,6 @@ test('host and guest play a whole match together; a latecomer watches', async ()
       }
       if (!late && g && g.n >= 3) {
         late = await addPage(env, server, 'c', 'Cy', 'mc');
-        late.page.pointer(422, 390 * 0.78); // taps PLAY on the title: the room is mid-match
         assert.ok(late.room.spectating);
         lateAt = env.ts;
       }
@@ -298,8 +297,6 @@ test('a guest reloads and the host reloads in the middle of a match: both come b
         env.pages.splice(env.pages.indexOf(B.page), 1);
         env.pages.push(page);
         B = { room, ow, page };
-        env.frames(300);
-        page.pointer(422, 390 * 0.78); // the title is back: tap to get in
         env.frames(300);
         assert.ok(room.spectating === false, 'still in the match');
         assert.ok(room.me.presence, 'back in the arena');

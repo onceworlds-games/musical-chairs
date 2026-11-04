@@ -170,19 +170,6 @@ export function noteShape(ctx, x, y, s, color) {
   ctx.restore();
 }
 
-/** A tiny chair icon (for the HUD): centre (x, y), width s. */
-export function chairIcon(ctx, x, y, s, color) {
-  ctx.save();
-  ctx.lineJoin = 'round';
-  ctx.lineWidth = Math.max(1.5, s * 0.1);
-  ctx.strokeStyle = INK;
-  roundRect(ctx, x - s * 0.4, y - s * 0.5, s * 0.8, s * 0.3, s * 0.1);
-  fillStroke(ctx, shade(color, -0.2), ctx.lineWidth);
-  roundRect(ctx, x - s * 0.45, y - s * 0.15, s * 0.9, s * 0.5, s * 0.14);
-  fillStroke(ctx, color, ctx.lineWidth);
-  ctx.restore();
-}
-
 /** Round to a number of decimals (for small messages). */
 export const r1 = (v) => Math.round(v * 10) / 10;
 export const r2 = (v) => Math.round(v * 100) / 100;

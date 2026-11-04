@@ -25,7 +25,7 @@ function setup() {
   return { errors, frames, pages, done: () => { console.error = orig; mock.timers.reset(); globalThis.innerWidth = 844; globalThis.innerHeight = 390; } };
 }
 
-test('Space starts from the title; a rotated phone, touch controls and a graphics change are all fine', async () => {
+test('a rotated phone, touch controls and a graphics change are all fine', async () => {
   const env = setup();
   try {
     const room = new SoloRoom();
@@ -33,11 +33,8 @@ test('Space starts from the title; a rotated phone, touch controls and a graphic
     const page = newPage(ow);
     env.pages.push(page);
     await import('../game/main.js?edge1');
-    env.frames(500);
-    assert.equal(ow.calls.controls.at(-1), null);
-    page.key('keydown', 'Space');
-    env.frames(300);
-    assert.equal(ow.calls.controls.at(-1).buttons[0].id, 'bump', 'Space went to the lobby');
+    env.frames(800);
+    assert.equal(ow.calls.controls.at(-1).buttons[0].id, 'bump', 'the lobby has its controls at once');
     // touch: the stick moves me, the button bumps
     const x0 = room.me.presence.x;
     ow.controls.stick.x = 1;

@@ -2,14 +2,14 @@
 // main.js boots the page, runs the loop and the screens. The rules live in rules.js (the Engine the host's page runs),
 // movement in sim.js, the bots in bots.js, drawing in draw.js and ui.js, the room and messages in net.js.
 
-import { W, H, RADIUS, GOLD, BOT_NAMES, DROP_MS, makeRoster, spawnPoint, colorOf, sanitizeG, sinceDip, hashStr } from './rules.js';
+import { W, H, RADIUS, GOLD, DROP_MS, makeRoster, spawnPoint, colorOf, sanitizeG, sinceDip, hashStr } from './rules.js';
 import { stepActor, tryBump, knock, WOBBLE } from './sim.js';
 import { World, Practice, syncField, canSit } from './world.js';
 import { Fx } from './fx.js';
 import { createAudio } from './audio.js';
 import { createInput } from './input.js';
 import { fitCamera, buildFloor, drawArena, updateVis, squash } from './draw.js';
-import { createUI, drawTitle, drawLobbyTop, drawHud, drawWatching, drawCountdown, drawBanner, drawBetween, drawPodium, drawStart } from './ui.js';
+import { createUI, drawLobbyTop, drawHud, drawBanner, drawBetween, drawPodium, drawStart } from './ui.js';
 import { connect, Session } from './net.js';
 import { label, clamp, r1, r2, roundRect } from './gfx.js';
 
@@ -36,12 +36,9 @@ async function start() {
 function boot(joined) {
   const ctx = canvas.getContext('2d');
   const STEP = 1 / 60;
-  const TITLE_CAST = Array.from({ length: 8 }, (_, i) => ({ id: `title${i + 1}`, b: 1, n: BOT_NAMES[i] }));
-  const TITLE_IDS = TITLE_CAST.map((e) => e.id);
 
   let room = null;
   let session = null;
-  let screen = 'title'; // 'title' | 'game'
   let acc = 0;
   let lastTs = 0;
   let cheers = 0;
@@ -63,13 +60,13 @@ function boot(joined) {
   const ui = createUI();
 
   const S = {
-    w: 0, h: 0, pr: 1, u: 1, cam: { s: 1, ox: 0, oy: 0 }, t: 0, now: 0, beat: 0, titleT: 0,
-    lobby: false, meId: null, youT: 99, dim: 0, flash: 0, reduced: false, goldAge: 1,
+    w: 0, h: 0, pr: 1, u: 1, cam: { s: 1, ox: 0, oy: 0 }, t: 0, now: 0, beat: 0,
+    lobby: false, meId: null, youT: 0, dim: 0, flash: 0, reduced: false, goldAge: 1,
     floor: null, floorKey: '', fx, world: null, people: new Map(), drawList: [], ui, g: null, me: null,
     banner: null, phaseT0: 0, podiumT0: 0, results: null, names: (id) => (S.people.get(id) || {}).name || 'Player',
   };
 
-  const track = { mid: '', n: -1, ph: '', seats: [], out: null, fmode: '', music: 'off', landed: '', rose: '', statsDone: '', quickDone: '', thief: null, finalG: null, cdLast: 99, cdGo: false, bumpsHit: 0 };
+  const track = { mid: '', n: -1, ph: '', seats: [], out: null, fmode: '', music: 'off', landed: '', rose: '', statsDone: '', quickDone: '', thief: null, finalG: null, bumpsHit: 0 };
 
   // ---------------------------------------------------------------- the cast
 
@@ -108,7 +105,6 @@ function boot(joined) {
     room.on('close', (reason) => {
       closedReason = reason || 'disconnected';
     });
-    if (screen === 'title') room.hideLobby(true);
     session.adopt();
   }
 
@@ -135,7 +131,6 @@ function boot(joined) {
 
   /** Who should be in the room right now, in order. */
   function castPlan(g) {
-    if (screen === 'title') return TITLE_CAST;
     const m = room.match;
     if (m.phase === 'lobby') {
       const ids = [];
@@ -169,13 +164,13 @@ function boot(joined) {
     const entries = castPlan(g);
     const m = room.match;
     const meId = room.me.id;
-    const spectating = screen === 'game' && room.spectating;
-    const botKind = screen === 'title' || (m.phase === 'playing' && room.isHost) ? 'bot' : 'view';
+    const spectating = room.spectating;
+    const botKind = m.phase === 'playing' && room.isHost ? 'bot' : 'view';
     const keep = new Set();
     let botIndex = -1;
     entries.forEach((e, i) => {
       if (e.b) botIndex++;
-      if (e.id === meId && (spectating || screen === 'title')) return;
+      if (e.id === meId && spectating) return;
       keep.add(e.id);
       const isMe = e.id === meId;
       const kind = isMe ? 'me' : e.b ? botKind : 'remote';
@@ -184,7 +179,7 @@ function boot(joined) {
         // where it was last seen (a reload gets its last presence back), else a spot for the lobby or the ring round the rug
         let p;
         const pres = isMe ? room.me.presence : (room.players.get(e.id) || {}).presence;
-        const snap = e.b && m.phase === 'playing' && screen === 'game' ? session.lastBotPos(botIndex) : null;
+        const snap = e.b && m.phase === 'playing' ? session.lastBotPos(botIndex) : null;
         if (snap) p = { x: snap[0], y: snap[1] };
         else if (!e.b && pres && Number.isFinite(pres.x) && Number.isFinite(pres.y)) p = { x: pres.x, y: pres.y };
         else if (m.phase === 'lobby') p = lobbySpot(e.id);
@@ -203,15 +198,9 @@ function boot(joined) {
         else if (!person.name) person.name = 'Player';
         ensureAvatar(person);
       } else if (e.n) person.name = e.n;
-      person.color = colorOf(m.phase === 'lobby' && screen === 'game' ? hashStr(e.id) % 12 : i);
+      person.color = colorOf(m.phase === 'lobby' ? hashStr(e.id) % 12 : i);
       a.color = person.color;
       a.name = person.name;
-      if (screen === 'game' && m.phase === 'lobby') {
-        const pl = room.players.get(e.id);
-        const ready = Boolean(pl && pl.ready);
-        if (ready && !a.ready) a.v.readyAt = S.t;
-        a.ready = ready;
-      } else a.ready = false;
     });
     for (const a of [...world.list]) if (!keep.has(a.id)) world.remove(a.id);
     S.me = world.get(meId) && world.get(meId).kind === 'me' ? world.get(meId) : null;
@@ -220,31 +209,17 @@ function boot(joined) {
 
   // ---------------------------------------------------------------- screens
 
-  function startPlay() {
-    if (screen !== 'title') return;
-    audio.unlock();
-    audio.sfx('pop');
-    screen = 'game';
-    S.youT = 0;
-    input.reset();
-    room.hideLobby(false);
-    world.clear();
-    reconcile(currentG());
-  }
-
   function onPointer(e) {
+    audio.unlock();
     if (e.button !== undefined && e.button > 0) return;
     const r = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : { left: 0, top: 0 };
     const id = ui.hit(e.clientX - r.left, e.clientY - r.top);
-    if (screen === 'title' && !id && room.match.phase !== 'lobby') return startPlay();
     if (!id) return;
     ui.pressed = id;
     setTimeout(() => {
       if (ui.pressed === id) ui.pressed = null;
     }, 140);
-    audio.unlock();
-    if (id === 'play') startPlay();
-    else if (id.startsWith('games')) {
+    if (id.startsWith('games')) {
       const v = Number(id.slice(5));
       if (room.isHost && room.match.phase === 'lobby') {
         room.setSetting('rounds', v);
@@ -262,12 +237,7 @@ function boot(joined) {
     attach(next);
   }
 
-  addEventListener('keydown', (e) => {
-    if (screen === 'title' && !e.repeat && (e.code === 'Space' || e.code === 'Enter')) {
-      e.preventDefault();
-      startPlay();
-    }
-  });
+  addEventListener('keydown', () => audio.unlock());
   canvas.addEventListener('pointerdown', onPointer);
 
   // ---------------------------------------------------------------- my own character
@@ -439,16 +409,14 @@ function boot(joined) {
 
   function onStarting(m) {
     S.results = null;
-    track.cdLast = 99;
-    track.cdGo = false;
     S.youT = 0;
     session.clearSnaps();
-    if (screen === 'title') room.hideLobby(true);
+    audio.unlock(); // the platform's Ready is outside this frame: where the browser lets a page make sound by now, start it
     // everyone gathers on the ring round the rug
     const roster = localRoster(m);
     const me = S.me || world.get(room.me.id);
     const i = roster.findIndex((e) => e.id === room.me.id);
-    if (me && i >= 0 && screen === 'game') {
+    if (me && i >= 0) {
       const p = spawnPoint(i, roster.length);
       me.x = p.x;
       me.y = p.y;
@@ -462,9 +430,8 @@ function boot(joined) {
     track.finalG = null;
     session.clearSnaps();
     session.adopt();
-    input.reset();
     S.youT = 0;
-    if (screen === 'title') room.hideLobby(true);
+    audio.sfx('beep', 0);
   }
 
   function onMatchEnd(m, prev) {
@@ -474,8 +441,6 @@ function boot(joined) {
     session.clearSnaps();
     input.reset();
     S.dim = 0;
-    if (screen === 'title') room.hideLobby(true);
-    else room.hideLobby(false);
   }
 
   function banner(text, dur = 1.4, color = '#fff', y = 0.25, big = false) {
@@ -578,13 +543,6 @@ function boot(joined) {
       track.music = F.music;
       track.landed = '';
       track.rose = '';
-    }
-    if (screen === 'title') {
-      // the arena behind the title just plays: no banners, no flashes
-      track.music = F.music;
-      track.landed = F.rid;
-      track.rose = F.rid;
-      return;
     }
     if (F.music !== track.music) {
       const prev = track.music;
@@ -690,11 +648,10 @@ function boot(joined) {
 
   function step(dt, g, frozen) {
     const m = room.match;
-    const playing = m.phase === 'playing' && screen === 'game';
+    const playing = m.phase === 'playing';
     if (m.phase === 'playing' && !room.running) return; // too few players: the match waits, and so does everything in it
     const F = world.field;
-    if (screen === 'title') practice.fill(F, clock(), 7, TITLE_IDS);
-    else if (playing && g) syncField(F, g, room.matchNow());
+    if (playing && g) syncField(F, g, room.matchNow());
     else if (m.phase === 'lobby') practice.fill(F, clock(), Math.max(2, Math.min(10, lobbyIds.length + 1)), lobbyIds);
     else {
       syncField(F, null, 0);
@@ -703,7 +660,7 @@ function boot(joined) {
     if (F.mode === 'practice') practiceSeats();
     world.afterField();
     if (!frozen) stepMe(dt); // a hit-stop holds only my own character: the bots and the match go on for everyone else
-    if (screen === 'title' || (playing && room.isHost)) world.stepBots(dt);
+    if (playing && room.isHost) world.stepBots(dt);
     if (playing && room.isHost) session.tick(room.matchNow());
   }
 
@@ -738,7 +695,7 @@ function boot(joined) {
     let key = 'off';
     const m = room.match;
     const g = S.g;
-    if (screen === 'game' && S.me && !room.spectating && !closedReason) {
+    if (S.me && !room.spectating && !closedReason) {
       if (m.phase === 'lobby') key = S.results ? 'off' : 'play';
       else if (m.phase === 'starting') key = 'play';
       else if (m.phase === 'playing' && g && g.ph !== 'final' && g.ph !== 'between') key = S.me.ghost ? 'cheer' : 'play';
@@ -758,10 +715,8 @@ function boot(joined) {
   function updateAudio(g, F, dt) {
     const m = room.match;
     let mode = 'off';
-    if (screen === 'game') {
-      if (m.phase === 'lobby') mode = F.music === 'play' ? 'lobby' : 'off';
-      else if (m.phase === 'playing' && g) mode = F.music === 'play' ? 'play' : F.music === 'party' ? 'party' : 'off';
-    }
+    if (m.phase === 'lobby') mode = F.music === 'play' ? 'lobby' : 'off';
+    else if (m.phase === 'playing' && g) mode = F.music === 'play' ? 'play' : F.music === 'party' ? 'party' : 'off';
     if (audio.ready()) {
       if (mode === 'off') audio.musicOff();
       else if (mode === 'play') audio.musicOn(g.n % 6, Math.min(130, 112 + 2 * (g.step - 1)), 0.6);
@@ -792,18 +747,15 @@ function boot(joined) {
     dt = Math.min(dt, 0.1);
     S.t += dt;
     S.now = S.t;
-    S.titleT += dt;
     S.youT += dt;
     fx.update(dt);
     S.dim = Math.max(0, S.dim - dt * 1.3);
     S.flash = Math.max(0, S.flash - dt * 5);
     if (S.results && S.t > S.results.until) S.results = null;
     const m = room.match;
-    // whoever runs the match runs it from the game screen, even if they never tapped PLAY
-    if (screen === 'title' && room.isHost && m.phase === 'playing') startPlay();
     const g = currentG();
     S.g = g;
-    S.lobby = screen === 'game' && m.phase === 'lobby';
+    S.lobby = m.phase === 'lobby';
     reconcile(g);
     updateRemotes(dt);
     if (m.phase === 'playing' && !room.isHost) {
@@ -830,7 +782,6 @@ function boot(joined) {
     }
     watchField(F);
     watchRecord(g, F);
-    updateCountdown(m);
     for (const a of world.list) {
       a.v.forceSeat = F.ph === 'over' && F.winner === a.id;
       updateVis(a, dt, S);
@@ -843,7 +794,7 @@ function boot(joined) {
 
   function publish() {
     const me = S.me;
-    if (me && room.connected && screen === 'game') {
+    if (me && room.connected) {
       try {
         room.setPresence({ x: r2(me.x), y: r2(me.y), vx: r1(me.vx + me.kx), vy: r1(me.vy + me.ky), b: me.bumpT > 0 ? 1 : 0, w: me.wob > 0 ? 1 : 0, s: me.chair >= 0 ? 1 : 0, c: cheers });
       } catch (err) {
@@ -854,35 +805,6 @@ function boot(joined) {
   }
 
   // ---------------------------------------------------------------- drawing
-
-  let cdText = '';
-  let cdAge = 0;
-  function updateCountdown(m) {
-    cdText = '';
-    if (screen !== 'game') return;
-    if (m.phase === 'starting' && typeof m.startsAt === 'number') {
-      const rem = m.startsAt - clock();
-      const n = Math.ceil(rem / 1000);
-      if (n >= 1) {
-        cdText = String(Math.min(3, n));
-        cdAge = (Math.min(3, n) * 1000 - rem) / 1000;
-        if (n !== track.cdLast) {
-          track.cdLast = n;
-          audio.sfx('beep', n);
-        }
-      } else {
-        cdText = 'GO!';
-        cdAge = clamp(-rem / 1000, 0, 1);
-        if (!track.cdGo) {
-          track.cdGo = true;
-          audio.sfx('beep', 0);
-        }
-      }
-    } else if (m.phase === 'playing' && room.matchNow() < 800 && track.cdGo) {
-      cdText = 'GO!';
-      cdAge = room.matchNow() / 1000;
-    }
-  }
 
   function render(g, F, m) {
     const key = `${S.w}x${S.h}x${S.pr}`;
@@ -898,26 +820,17 @@ function boot(joined) {
     ui.reset();
     drawArena(ctx, S);
     if (closedReason) return drawClosed();
-    if (screen === 'title') {
-      drawTitle(ctx, S);
-    } else if (m.phase === 'lobby') {
+    if (m.phase === 'lobby') {
       if (S.results) drawPodium(ctx, S, S.results.g, S.t - S.podiumT0);
       else {
         const games = Number(room.settings.rounds) || 2;
         drawLobbyTop(ctx, S, room.isHost, games);
         if (room.stub) drawStart(ctx, S);
       }
-    } else if (m.phase === 'starting') {
-      if (cdText) drawCountdown(ctx, S, cdText, cdAge);
-      if (room.spectating) drawWatching(ctx, S);
-    } else if (m.phase === 'playing') {
-      if (room.spectating) drawWatching(ctx, S);
-      if (g) {
-        if (g.ph === 'between') drawBetween(ctx, S, g, S.t - S.phaseT0);
-        else if (g.ph === 'final') drawPodium(ctx, S, g, S.t - S.podiumT0);
-        else drawHud(ctx, S, g, S.meId);
-      }
-      if (cdText) drawCountdown(ctx, S, cdText, cdAge);
+    } else if (m.phase === 'playing' && g) {
+      if (g.ph === 'between') drawBetween(ctx, S, g, S.t - S.phaseT0);
+      else if (g.ph === 'final') drawPodium(ctx, S, g, S.t - S.podiumT0);
+      else drawHud(ctx, S, g, S.meId);
     }
     if (S.banner) {
       if (S.t - S.banner.t0 > S.banner.dur) S.banner = null;
@@ -943,7 +856,7 @@ function boot(joined) {
     roundRect(ctx, -bw / 2, -bh / 2, bw, bh, 20 * u);
     ctx.fill();
     ctx.stroke();
-    label(ctx, closedReason === 'replaced' ? 'PLAY HERE' : 'PLAY', 0, 0, 34 * u);
+    label(ctx, closedReason === 'replaced' ? 'PLAY HERE' : 'REJOIN', 0, 0, 34 * u);
     ctx.restore();
   }
 

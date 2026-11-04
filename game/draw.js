@@ -744,25 +744,9 @@ export function drawActor(ctx, S, a) {
     ctx.restore();
   }
 
-  // over the head: the READY check, the seat's check mark, a speech bubble, the YOU arrow
+  // over the head: the seat's check mark, a speech bubble, the YOU arrow
   let top = gy - (1.62 + hop) * k;
-  if (a.ready && S.lobby) {
-    const pp = pop(S.t - (v.readyAt ?? S.t) + 0.001, 0.4);
-    ctx.save();
-    ctx.translate(gx, top - 0.1 * k);
-    ctx.scale(pp, pp);
-    const fs = Math.max(11, cam.s * 0.5);
-    ctx.font = font(fs);
-    const tw = ctx.measureText('READY').width;
-    const total = tw + fs * 1.9;
-    const x0 = -total / 2;
-    roundRect(ctx, x0, -fs * 0.75, total, fs * 1.5, fs * 0.75);
-    fillStroke(ctx, '#2ed573', Math.max(2.5, fs * 0.16));
-    checkBadge(ctx, x0 + fs * 0.85, 0, fs * 0.55, '#1c9a4f');
-    label(ctx, 'READY', x0 + fs * 1.55 + tw / 2, 0, fs, { align: 'center' });
-    ctx.restore();
-    top -= 0.5 * k;
-  } else if (a.sat && !seatedForever(F, a)) {
+  if (a.sat && !seatedForever(F, a)) {
     const pp = pop(v.satT, 0.35);
     checkBadge(ctx, gx, top - 0.05 * k, 0.26 * k * pp);
     top -= 0.2 * k;

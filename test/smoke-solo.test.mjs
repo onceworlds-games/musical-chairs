@@ -1,11 +1,11 @@
-// main.js, run in node against a fake browser and a one-player room: the title, the lobby, a whole match against bots
+// main.js, run in node against a fake browser and a one-player room: the lobby, a whole match against bots
 // (played by a little script that reads the room's record), the podium and the way back to the lobby.
 import test, { mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { installGlobals, newPage, runFrame, makeOw } from './fake-dom.mjs';
 import { SoloRoom } from '../game/net.js';
 
-test('a solo page plays a whole match: title, lobby, countdown, rounds, podium, back to the lobby', async () => {
+test('a solo page plays a whole match: lobby, rounds, podium, back to the lobby', async () => {
   mock.timers.enable({ apis: ['setTimeout', 'setInterval', 'Date'], now: 1_000_000 });
   const errors = [];
   const origError = console.error;
@@ -31,11 +31,7 @@ test('a solo page plays a whole match: title, lobby, countdown, rounds, podium, 
     };
     assert.deepEqual(ow.calls.orientation, ['landscape']);
 
-    // the title: arena behind it, no touch controls
-    frames(1200);
-    assert.equal(ow.calls.controls.at(-1), null);
-    // a tap on PLAY
-    page.pointer(422, 390 * 0.78);
+    // straight into the lobby, nothing to tap first
     frames(400);
     const lobbyControls = ow.calls.controls.at(-1);
     assert.ok(lobbyControls && lobbyControls.stick === 'analog' && lobbyControls.buttons[0].label === 'Bump' && lobbyControls.buttons[0].key === ' ', 'touch controls in the lobby');
@@ -58,12 +54,9 @@ test('a solo page plays a whole match: title, lobby, countdown, rounds, podium, 
 
     // START (the stand-in for the platform's strip)
     page.pointer(422, 390 - 56);
-    assert.equal(room.match.phase, 'starting');
-    frames(1500);
-    assert.equal(ow.calls.controls.at(-1).buttons[0].label, 'Bump');
-    frames(1700);
     assert.equal(room.match.phase, 'playing');
     frames(200);
+    assert.equal(ow.calls.controls.at(-1).buttons[0].label, 'Bump');
     assert.ok(room.state.g && room.state.g.mid === room.match.id, 'the host wrote the match record');
     assert.equal(room.state.g.roster.length, 8, 'seven bots and me');
     assert.equal(room.state.g.roster.filter((e) => e.b).length, 7);
